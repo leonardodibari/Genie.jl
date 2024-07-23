@@ -268,3 +268,67 @@ function accessible_codons_old(old_codon::String, codon_net::Dict{String, Dict{I
     
     return codon_net[old_codon][nucleo_pos], Int8.(get.(Ref(cod2amino), codon_net[old_codon][nucleo_pos], 0))
 end
+
+
+
+function read_dist_from_file(filename::String, zipped::Bool)
+
+    if zipped
+        filename = filename * ".gz" 
+        file = GZip.open(filename,"r")
+        dist_vec = Int.(readdlm(file))
+        close(file)
+    else
+        file = open(filename,"r")
+        dist_vec = Int.(readdlm(file))
+        close(file)
+    end
+
+    return dist_vec
+    
+end
+
+
+
+function exchange_parameters(J::Array{Float64, 4}, t::Float64, n::Int)
+    q, L, q2, L2 = size(J)
+    
+    if q != q2 || L != L2
+        error("The dimensions of J should be q x L x q x L")
+    end
+    
+    J_copy = copy(J)
+    
+    # Step 1: Identify elements above the threshold
+    indices_above_threshold = []
+    for a in 1:q, i in 1:L, b in 1:q, j in 1:L
+        if abs.(J[a, i, b, j]) > t
+            push!(indices_above_threshold, (a, i, b, j))
+        end
+    end
+
+    # Step 2: Select `n` elements randomly
+    if length(indices_above_threshold) < n
+        error("Not enough elements above the threshold to exchange.")
+    end
+    selected_indices = rand(indices_above_threshold, n)
+
+    # Step 3: Exchange elements while maintaining symmetry
+    for k in 1:2:n  # Step in pairs
+        if k < length(selected_indices)
+            # Get the pair of indices to swap
+            idx1 = selected_indices[k]
+            idx2 = selected_indices[k+1]
+
+            # Perform the swap
+            J_copy[idx1[1], idx1[2], idx1[3], idx1[4]], J_copy[idx2[1], idx2[2], idx2[3], idx2[4]] = 
+            J_copy[idx2[1], idx2[2], idx2[3], idx2[4]], J_copy[idx1[1], idx1[2], idx1[3], idx1[4]]
+
+            # Maintain symmetry
+            J_copy[idx1[3], idx1[4], idx1[1], idx1[2]], J_copy[idx2[3], idx2[4], idx2[1], idx2[2]] = 
+            J_copy[idx2[3], idx2[4], idx2[1], idx2[2]], J_copy[idx1[3], idx1[4], idx1[1], idx1[2]]
+        end
+    end
+
+    return J_copy
+end

@@ -7,7 +7,6 @@ function run_evolution(start_msa, h::Array{T,2}, J::Array{T,4};
         rand_init = false, 
         q = 21, 
         codon_bias::Union{Nothing, Dict{String, Float64}} = nothing, 
-        savefile::Union{String, Nothing} = nothing,
         verbose = false) where {T}
     
     
@@ -41,7 +40,7 @@ function run_evolution(start_msa, h::Array{T,2}, J::Array{T,4};
     
     if rand_init == true
         println("Random Initialization")
-        chains = [Chain(Int8.(rand(1:21, L)), q, rng[n]) for n in 1:N_chains]
+        chains = [Chain(Int8.(rand(1:q, L)), q, rng[n]) for n in 1:N_chains]
     else
         chains = [Chain(start_msa[:,n], q, rng[n]) for n in 1:N_chains]
     end
@@ -93,11 +92,11 @@ function run_evolution(start_msa, h::Array{T,2}, J::Array{T,4};
     if (N_points !== nothing) || (each_step !== nothing) 
         return (step_msa = step_msa, step_msa_dna = step_msa_dna, codon_usage = codon_usage, steps = steps, p = p, temp = temp)
     else
-        msa = zeros(L, N_chains)
+        msa = Int8.(zeros(L, N_chains))
         msa_dna = Matrix{String}(undef, L, N_chains)
         @tasks for n in 1:N_chains
             for i in 1:L
-                msa[i,n] = chains[n].seq[i]
+                msa[i,n] = Int8.(chains[n].seq[i])
                 msa_dna[i,n] = chains[n].DNA[i]
             end
         end
