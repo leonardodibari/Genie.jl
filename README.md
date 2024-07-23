@@ -7,7 +7,7 @@ This package provides tools for simulating the evolution of multiple sequence al
 
 ## Parameters
 
-- **start_msa::Array{T,2}**: Initial multiple sequence alignment (MSA) as a 2D array, T can be both Int8 if it's composed of aminoacids or a String if it's composed of nucleotide codons. If you give aminoacids as inputs, the relative codons will be sampled randomly among the ones coding for the repective aminoacids. The format size must be (L,M), where L is the length of the sequence, so columns represent different sequences.
+- **start_msa::Array{T,2}**: Initial multiple sequence alignment (MSA) as a 2D array, T can be both Int8 if it's composed of aminoacids or a String if it's composed of nucleotide codons. If you give aminoacids as inputs, the relative codons will be sampled randomly among the ones coding for the respective aminoacids. The format size must be (L,M), where L is the length of the sequence, so columns represent different sequences.
 - **h::Array{T,2}**: 2D array of size (q, L) representing field parameters.
 - **J::Array{T,4}**: 4D array of size (q, L, q, L) representing coupling parameters.
 
