@@ -7,9 +7,26 @@ function loc_sample!(rng::AbstractRNG, wv, codon_list::Array{String,1}, dest_seq
         i += one(Ti)
         @inbounds cw += wv[i]
     end
-    
+        
     dest_DNA[seq_site] = codon_list[i]
     dest_seq[seq_site] = cod2amino[codon_list[i]]
+
+end
+
+function loc_sample2!(wv, codon_list::Array{String,1}, dest_seq::Array{Ti, 1}, dest_DNA::Array{String,1}, seq_site::Int) where {Ti<:Integer}
+    t = rand() * sum(wv)
+    n = length(wv)
+    i = one(Ti)
+    cw = wv[1]
+    while cw < t && i < n
+        i += one(Ti)
+        @inbounds cw += wv[i]
+    end
+    #old = deepcopy(dest_seq); println(); print(dest_DNA[seq_site] == codon_list[i]); print(" ")
+    dest_DNA[seq_site] = codon_list[i]
+    dest_seq[seq_site] = cod2amino[codon_list[i]]
+    #print((old[seq_site], dest_seq[seq_site])); print("  "); print(ham_dist(old, 
+     #       dest_seq)); print("  ");println();
 end
 
 
@@ -332,3 +349,6 @@ function exchange_parameters(J::Array{Float64, 4}, t::Float64, n::Int)
 
     return J_copy
 end
+
+
+

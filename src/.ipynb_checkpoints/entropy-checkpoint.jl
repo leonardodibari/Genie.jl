@@ -37,6 +37,31 @@ function cont_dep_entr(background::Array{Int8,1}, h::Array{T,2}, J::Array{T,4}; 
     return get_entropy(prob, q = q)[:]
 end
 
+function single_site_prob_cond_with_T(k::Int, mutated_seq::Array{Int8,1}, h::Array{T,2}, J::Array{T,4}, L::Int; q::Int = 21, temp = 1.0) where {T}
+	prob = T.(zeros(q))
+	for i in 1:q
+        q_k = i
+		log_proba = h[q_k, k]
+ 		for j in 1:L
+			log_proba += J[mutated_seq[j], j, q_k, k]
+        end
+		prob[i] = exp(log_proba/temp)
+	end
+	return normalize(prob,1)
+    
+end
+
+
+function cont_dep_entr_with_T(background::Array{Int8,1}, h::Array{T,2}, J::Array{T,4}; q =21, temp = 1.0) where {T}
+    
+    L = size(background,1)
+    
+    prob = hcat([ProbabilityWeights(single_site_prob_cond_with_T(site, background, h, J, L, q=q, temp = temp)) for site in 1:L]...)
+
+    return get_entropy(prob, q = q)[:]
+end
+
+
 function cde_1site(site::Int, background::Array{Int8,1}, h::Array{T,2}, J::Array{T,4}; q =21) where {T}
   
     L = length(background)

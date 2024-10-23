@@ -91,5 +91,102 @@ function check_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,
     
     
 end
+
+
+function info_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,2}, h::Array{T,2}, J::Array{T,4}, steps::Array{Int,1}) where {T}
+    
+    L, M = size(step_msa[1])
+    
+    wt = step_msa[1][:,1]
+    
+    cie = CIE(nat_msa)
+    
+    cde_wt = cont_dep_entr(wt, h, J)
+    
+    freqs = [reshape(compute_weighted_frequencies(x,22,0.)[1],(21, L)) 
+        for x in step_msa]
+    entr = [get_entropy(f) for f in freqs];
+    entr = hcat(entr...)';
+    
+    epis= [x in sortperm(cie .- cde_wt, rev=true)[1:10] for x in 1:length(cie)]
+    d_from_neg_bisec = (cde_wt .+ cie .- 2) ./ sqrt(2)
+    varr = [x in sortperm(d_from_neg_bisec, rev=true)[1:10] for x in 1:length(cie)]
+    cons = [x in sortperm(d_from_neg_bisec, rev=false)[1:10] for x in 1:length(cie)]
     
     
+    
+    return epis, varr, cons, cde_wt, entr
+    
+end
+    
+   
+
+function pair_dist_freq(msa; n_seq::Int = 500)
+    L = size(msa,1)
+    d = pairwise_ham_dist(Int8.(msa), n_seq = n_seq, all = true); 
+    count_d = [sum(d .== i) for i in 1:L] ./length(d)
+    return count_d
+end
+    
+    
+
+function check_pairwise(f_nat::Array{T,1}, f_sim::Array{T,1}, save_path::String) where T
+    close("all")
+    # Create a new figure
+    plt.plot(f_nat, color="blue", label="nat", linewidth=2)
+    # Plot the second histogram for 'sim' with no fill
+    plt.plot(f_sim, color="red", label="sim", linewidth=2)
+
+    plt.yscale("log")
+    # Add labels and legend
+    plt.xlabel("Pairwise Hamming")
+    plt.ylabel("Frequency")
+    plt.legend()
+
+    # Save the plot to the specified path
+    plt.savefig(save_path)
+end
+
+
+function check_energy(path::String, nat_msa::Array{Int8,2}, msa::Array{Int8,2}, h::Array{Float64,2}, J::Array{Float64,4})
+    en_nat = energy(nat_msa, h, J)
+    en_sim = energy(msa, h, J)
+    
+    close("all")
+    # Plot the first histogram for 'nat' with no fill
+    plt.hist(en_nat, bins=30, histtype="step", color="blue", label="nat", linewidth=2)
+
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(en_sim, bins=30, histtype="step", color="red", label="sim", linewidth=2)
+
+    # Add labels and legend
+    plt.xlabel("Energy")
+    plt.ylabel("Frequency")
+    plt.yscale("log")
+    plt.legend()
+
+    # Save the plot to the specified path
+    plt.savefig(path)
+end
+
+
+function check_energy(path::String, nat_msa::Array{Int8,2}, msa::Array{Int8,2}, h::Array{Float64,2}, J::Array{Float64,4}, w::Array{Float64,1})
+    en_nat = energy(nat_msa, h, J)
+    en_sim = energy(msa, h, J)
+    
+    close("all")
+    # Plot the first histogram for 'nat' with no fill
+    plt.hist(en_nat, weights = w, bins=30, histtype="step", color="blue", label="nat", linewidth=2)
+
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(en_sim, bins=30, histtype="step", color="red", label="sim", linewidth=2)
+
+    # Add labels and legend
+    plt.xlabel("Energy")
+    plt.ylabel("Frequency")
+    plt.yscale("log")
+    plt.legend()
+
+    # Save the plot to the specified path
+    plt.savefig(path)
+end

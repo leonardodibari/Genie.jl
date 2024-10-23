@@ -10,16 +10,17 @@ function check_equilibration(folder::String, nat_msa::Array{Int8,2}, step_msa::A
         error("Length of step_msa and of steps is different")
     end
     
-    f1_nat,f2_nat = DCAUtils.compute_weighted_frequencies(nat_msa, 22, 0.2); conn_nat = triu(f2_nat .- f1_nat' * f1_nat, 21);
-    dist_nat = mean(ham_dist(step_msa[1][:,1], nat_msa))
-    err_dist_nat = std(ham_dist(step_msa[1][:,1], nat_msa))
+    f1_nat,f2_nat = DCAUtils.compute_weighted_frequencies(nat_msa, 22, 0.2); conn_nat = triu(f2_nat - f1_nat * f1_nat', 21);
+    w = compute_weights(nat_msa, 22, 0.2)[1];
+    dist_nat = mean(ham_dist(step_msa[1][:,1], nat_msa), weights(w))
+    err_dist_nat = std(ham_dist(step_msa[1][:,1], nat_msa), weights(w))
     cor1 = []; cor2 = []; corconn = []; dist = []; err_dist = [];
     for x in step_msa
         f1,f2 = DCAUtils.compute_weighted_frequencies(x, 22, 0.); 
         conn = triu(f2 - f1 * f1',21);
         push!(cor1, cor(f1[:], f1_nat[:]))
         push!(cor2, cor(f2[:], f2_nat[:]))
-        push!(corconn, cor(conn[conn .!=0], conn_nat[conn_nat .!= 0]))
+        push!(corconn, cor(conn[:], conn_nat[:]))
         dists = ham_dist(step_msa[1], x)       
         push!(dist, mean(dists))
         push!(err_dist, var(dists))

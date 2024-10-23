@@ -28,6 +28,14 @@ function single_mut_dE(seq::Array{Int8, 1}, h::Array{T,2}, J::Array{T,4}, new_aa
 end
     
     
+function single_mut_dE(seq::Array{Int, 1}, h::Array{T,2}, J::Array{T,4}, new_aa, mut_pos::Int, L::Int) where {T}
+    delta_E = h[seq[mut_pos], mut_pos] - h[new_aa, mut_pos]
+    @inbounds for j in 1:L
+        delta_E += J[seq[mut_pos], mut_pos, seq[j], j] - J[new_aa, mut_pos, seq[j], j]
+    end
+    return delta_E
+end
+   
 
 #### old functions
 
