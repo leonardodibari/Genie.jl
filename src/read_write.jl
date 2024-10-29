@@ -253,3 +253,22 @@ function matrixtofasta(path, MSA)
         end
     end
 end
+
+function leafstofasta(path, tree)
+    n_seq = length(tree.lleaves)
+    FastaWriter(path, "w") do file
+        for a in keys(tree.lleaves) 
+            writeentry(file, "$(a)", vec2string(tree["$(a)"].data.seq[:]))
+        end
+    end
+end
+
+
+function nodestofasta(path, tree)
+    n_seq = length(tree.lleaves)
+    FastaWriter(path, "w") do file
+        for a in keys(tree.lnodes) 
+            writeentry(file, "$(a)", vec2string(tree["$(a)"].data.seq[:]))
+        end
+    end
+end

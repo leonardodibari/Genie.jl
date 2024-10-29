@@ -276,8 +276,6 @@ function assign_sequences!(node::TreeNode{Seq},
 end
 
 
-
-
 function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}}, tree_file::String, h::Array{T,2},   J::Array{T,4};
         temp::Float64 = 1.0, 
         mu::Float64 = 1.0,
@@ -312,8 +310,8 @@ function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}}, tree
     
     if N_trees == 1
         rng = random_gens(N_trees+1)  
-        @time chains = [Storage(start_seq, tree_file, rng[n]) for n in 1:N_trees+1]
-        @time assign_sequences!(chains[1].tree.root, chains[1], h, J, 
+        chains = [Storage(start_seq, tree_file, rng[n]) for n in 1:N_trees+1]
+        assign_sequences!(chains[1].tree.root, chains[1], h, J, 
             codon_net, all_codons, codon_usage, length_of_moves, temp, mu, p, L)
         return chains[1].tree
         
