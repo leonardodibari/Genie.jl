@@ -5,8 +5,9 @@
 
 The complete description of the algorithm is available at
 > Emergent time scales of epistasis in protein evolution   
-> Leonardo Di Bari, Matteo Bisardi, Sabrina Cotogno, Martin Weigt, Francesco Zamponi
+> Leonardo Di Bari, Matteo Bisardi, Sabrina Cotogno, Martin Weigt, Francesco Zamponi;
 > doi: https://www.pnas.org/doi/10.1073/pnas.2406807121
+
 Please cite this article if you use Genie.jl! 
 
 # Genie.jl Evolution Simulation Package
