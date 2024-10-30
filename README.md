@@ -3,7 +3,11 @@
 
 **Genie.jl** is a Julia package designed to simulate the evolution of multiple sequence alignments (MSAs) based on specified parameters and conditions. Its primary function, `run_evolution`, enables users to simulate evolutionary trajectories for amino acid or nucleotide codon sequences under complex interaction parameters.
 
-
+The complete description of the algorithm is available at
+> Emergent time scales of epistasis in protein evolution   
+> Leonardo Di Bari, Matteo Bisardi, Sabrina Cotogno, Martin Weigt, Francesco Zamponi
+> doi: https://www.pnas.org/doi/10.1073/pnas.2406807121
+Please cite this article if you use Genie.jl! 
 
 # Genie.jl Evolution Simulation Package
 
