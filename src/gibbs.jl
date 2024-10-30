@@ -8,9 +8,6 @@ function log_prob!(log_prob::Array{T,1},
         seq_site::Int,
         L::Int) where {T}
     
-    
-    
-    
     @inbounds for x in 1:length(log_prob)
         a = cod2amino[codon_list[x]] 
         log_prob[x] = h[a,seq_site] +temp*log(codon_usage[codon_list[x]])
@@ -34,9 +31,6 @@ function get_prob!(chain,
         temp::T,
         L::Int) where {T}
        
-    #println("New codon and amino list")
-    #println(codon_list, amino_list)
-    
     if all_equal(amino_list) == true
         chain.seq[seq_site] == amino_list[1]
         chain.DNA[nucleo_site] == rand(codon_list)
@@ -44,8 +38,6 @@ function get_prob!(chain,
         log_prob!(log_prob, chain, h, J, codon_usage, codon_list, temp, seq_site, L)
         log_prob ./= temp
         loc_softmax!(log_prob)
-        #println("New probability")
-        #println(log_prob)
         loc_sample!(chain.generator, log_prob, codon_list, chain.seq, chain.DNA, seq_site)
     end
 end
@@ -90,31 +82,17 @@ function prob_cond!(chain,
         get_prob!(chain, chain.amino_list4, chain.codon_list4, chain.log_prob4, h, J, seq_site, 
             nucleo_site, codon_usage, temp, L)
     end
-    
-    
-       
-    #amino_list2, codon_list2 =  get_accessible_nucleo_muts_DNA_det_bal(chain.DNA[seq_site], nucleo_site)
-    
-    #println("Old codon and amino list")
-    #println(codon_list2, amino_list2)
-    
-    #print("Old probability")
-    #println(nucleo_cond_proba_DNA_gibbs_new(seq_site, amino_list2, codon_list2, chain.seq, h, permutedims(J, [1,3,2,4]), L,  temp = temp))
-    
-    #=if length(unique(amino_list)) == 1
-        chain.seq[seq_site] == cod2amino[codon_list[1]]
-        chain.DNA[nucleo_site] == rand(codon_list)
-    else
-        log_prob = T.(zeros(length(codon_list)))
-        log_prob!(log_prob, chain, h, J, codon_usage, codon_list, temp, seq_site, L)
-        log_prob ./= temp
-        loc_softmax!(log_prob)
-        #println("New probability")
-        #println(log_prob)
-        loc_sample!(chain.generator, log_prob, codon_list, chain.seq, chain.DNA, seq_site)
-end=#
+
 end
 
+function return_pos_rng(rng, seq::Array{Int8,1},L::Int)
+    idx = rand(rng, 1:L)
+    if seq[idx] == 21
+        return_pos_rng(rng, seq, L)
+    else
+        return idx
+    end
+end
 
 
 function run_gibbs_sampling!(chains, 
@@ -128,7 +106,8 @@ function run_gibbs_sampling!(chains,
         L::Int) where {T}
     
     @tasks for n in 1:N_chains
-        seq_site = rand(chains[n].generator, findall(x -> x != 21, chains[n].seq))
+        seq_site = return_pos_rng(chains[n].generator, chains[n].seq, L)   
+        #seq_site = rand(chains[n].generator, findall(x -> x != 21, chains[n].seq))
         nucleo_site = rand(chains[n].generator,1:3)
         prob_cond!(chains[n], h, J, seq_site, nucleo_site, codon_net, codon_usage, length_of_moves, temp, L)
     end
@@ -137,63 +116,4 @@ end
 
 
 
-
-### old functions
-
-function get_accessible_nucleo_muts_DNA_det_bal(old_codon, nucleo_pos::Integer)
-    old_codon = [string(old_codon[i]) for i in 1:3 ]
-	codon_list = Vector{AbstractString}(undef, 4)
-	new_codon = deepcopy(old_codon)
-	for (j, nucl) in enumerate(["A", "C", "G", "T"]) 
-		new_codon[nucleo_pos] = nucl
-		codon_list[j] = join(new_codon)
-	end
-    
-    codon_list = filter!(aa->aa != "TAA", codon_list)
-    codon_list = filter!(aa->aa != "TAG", codon_list)
-    codon_list = filter!(aa->aa != "TGA", codon_list)
-    
-	amino_list = get.(Ref(cod2amino), codon_list, 0)
-	#amino_list = filter!(aa->aa != 21, amino_list)
-
-	return amino_list, codon_list
-end
-
-
-function sum_couplings_inbounds(mutated_seq, q_k, k, J::Array{Float64,4}, N)
-    result = 0
-    @inbounds for i in 1:N
-        result += J[mutated_seq[i], q_k ,i, k]
-    end
-    return result
-end 
-
-
-function log_p(mutated_seq, q_k, k, h, J::Array{Float64,4}, N::Integer; temp=1)
-    
-    log_proba = h[q_k, k] -temp*log(length(amino2cod[q_k]))
-    log_proba += sum_couplings_inbounds(mutated_seq, q_k, k, J, N)
-    return log_proba  
-end
-
-function nucleo_cond_proba_DNA_gibbs_new(k, q, codon_list, mutated_seq, h::Array{Float64,2}, J::Array{Float64,4}, N::Integer;  temp = 1)
-	prob = zeros(length(codon_list))
-        
-    d = Dict{Int64, Float64}()
-    
-	@inbounds for (index, q_k) in enumerate(q)
-            
-        if haskey(d, q_k)
-            log_proba = d[q_k]
-            #println("not computed")
-        else
-            log_proba = log_p(mutated_seq, q_k, k, h, J, N, temp = temp)
-            d[q_k] = log_proba
-            #println("computed")
-        end
-		prob[index] = exp(log_proba/temp)
-	end
-        
-	return normalize(prob,1)
-end
 

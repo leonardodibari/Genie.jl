@@ -141,6 +141,17 @@ function return_pos(seq::Array{Int,1},L::Int)
     end
 end
 
+
+function return_pos(seq::Array{Int8,1},L::Int)
+    idx = rand(1:L)
+    if seq[idx] == 21
+        return_pos(seq,L)
+    else
+        return idx
+    end
+end
+
+
 function run_gibbs_sampling_tree!(chain::Storage{Int64, Float64}, 
         seq::Array{Int,1}, 
         DNA::Array{String,1}, 

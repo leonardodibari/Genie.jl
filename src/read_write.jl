@@ -1,6 +1,38 @@
 #export fasta2matrix, map_gaps, read_par_BM, read_par_BM_LR
 
 
+function read_graph_new(filepath)
+    file = open(filepath, “r”); content = read(file, String)[1:end-1]; close(file)
+        content = split(content, “\n”)
+            alphabet, idx = “”, 0
+            for line ∈ content
+                if string(line[1]) == “h”
+                    _, i, a, value = split(line, ” “)
+                    if alphabet == “” || !occursin(a, string(alphabet))
+                        alphabet = alphabet * a
+                    end
+                    idx += 1
+                end
+            end
+            Nq = length(alphabet)
+            Nv = div(idx, Nq)
+            J, vbias = zeros(Float32, Nv*Nq, Nv*Nq), zeros(Float32, Nq, Nv)
+            for line ∈ content
+                if string(line[1]) == “J”
+                    _, i, j, a, b, value = split(line, ” “)
+                    i, j = parse(Int64, i) + 1, parse(Int64, j) + 1
+                    id1, id2 = id(i, findfirst(a, string(alphabet)), Nq)[1], id(j, findfirst(b, string(alphabet)), Nq)[1]
+                    J[id1, id2], J[id2, id1] = parse(Float32, value), parse(Float32, value)
+                elseif string(line[1]) == “h”
+                    _, i, a, value = split(line, ” “)
+                    i = parse(Int64, i) + 1
+                    vbias[findfirst(a, string(alphabet))[1], i] = parse(Float32, value)
+                end
+            end
+        return J, vbias, alphabet
+    end
+
+
 function read_par_BM_standardorder(path::AbstractString, q::Integer = 21)
     params = readdlm(path,' ', use_mmap = true)[:, 2:6]
     l_file = size(params, 1)
@@ -91,23 +123,8 @@ function read_par_BM(path::AbstractString, q, N)
 end
 
 
-"""
-    num2letter(i::Integer)
-
-    Takes as input an integer (representing an amino acid)
-    and returns its conventional character representation.
-    In this case with the convention "1 2 .. 21" == "A C .. -"
-"""
 
 
-let alphabet = ["A", "C", "D", "E", "F", "G", "H", "I",  "K", "L",  "M",  "N", "P",  "Q",  "R",
-"S",  "T", "V",  "W",  "Y"]
-    global num2letter
-    function num2letter(i :: Integer)
-        1 <= i <= 20 && return alphabet[i]
-        return "-"
-    end
-end
 
 
 """

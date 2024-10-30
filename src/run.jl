@@ -1,3 +1,49 @@
+
+# run.jl
+# Main script to execute and manage the analyses for energy and timescale calculations.
+
+"""
+    run_evolution(start_msa, h::Array{T,2}, J::Array{T,4};
+                   N_steps::Int = 100, 
+                   temp::Float64 = 1.0,  
+                   p::Float64 = 0.5, 
+                   N_points::Union{Int, Nothing} = nothing, 
+                   each_step::Union{Int, Nothing} = nothing, 
+                   rand_init::Bool = false, 
+                   q::Int = 21, 
+                   codon_bias::Union{Nothing, Dict{String, Float64}} = nothing, 
+                   verbose::Bool = false) where {T}
+
+Run the evolutionary simulation of multiple sequence alignments (MSA) using Gibbs sampling and Metropolis algorithms.
+
+# Arguments
+- `start_msa`: Initial multiple sequence alignment (MSA) as a matrix. *(non-optional)*
+- `h`: A 2D array of external field parameters. *(non-optional)*
+- `J`: A 4D array of interaction parameters, should be of shape `(q, L, q, L)`. *(non-optional)*
+- `N_steps`: Total number of evolutionary steps to simulate (default is `100`). *(optional)*
+- `temp`: Temperature parameter for sampling algorithms (default is `1.0`). *(optional)*
+- `p`: Probability of using Gibbs sampling over Metropolis sampling (default is `0.5`). *(optional)*
+- `N_points`: Number of points to collect along the trajectory in logarithmic scale (default is `nothing`). *(optional)*
+- `each_step`: Step interval for collecting MSAs (default is `nothing`). *(optional)*
+- `rand_init`: Initialize chains randomly if set to `true` (default is `false`). *(optional)*
+- `q`: Number of different codons (default is `21`). *(optional)*
+- `codon_bias`: Dictionary specifying codon usage bias (default is `nothing`). *(optional)*
+- `verbose`: Print detailed output during execution if set to `true` (default is `false`). *(optional)*
+
+# Returns
+- A tuple containing:
+  - `step_msa`: List of MSAs collected at specified steps (if `N_points` or `each_step` is specified).
+  - `step_msa_dna`: Corresponding DNA sequences.
+  - `codon_usage`: Dictionary of codon usage.
+  - `steps`: The list of steps at which MSAs were collected.
+  - `msa`: Final MSA collected after all steps (if neither `N_points` nor `each_step` is specified).
+  - `msa_dna`: Final DNA sequences corresponding to the MSA.
+
+# Errors
+- Throws errors for invalid dimensions of input arrays `J` and `h`, conflicts between `N_points` and `each_step`, only one of the two must be different from nothing and they must be smaller than `N_steps`.
+"""
+
+
 function run_evolution(start_msa, h::Array{T,2}, J::Array{T,4}; 
         N_steps::Int = 100, 
         temp = 1.0,  

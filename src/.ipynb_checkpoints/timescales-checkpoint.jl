@@ -1,3 +1,30 @@
+
+# timescales.jl
+# Functions for calculating timescales related to correlation and relaxation.
+
+
+"""
+    check_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,2}, 
+                     h::Array{T,2}, J::Array{T,4}, steps::Array{Int,1}, 
+                     filepath::String) where {T}
+
+Generates and saves plots to analyze timescales based on provided multiple sequence alignments (MSA).
+
+# Arguments
+- `step_msa`: An array of multiple sequence alignments at different evolutionary steps. *(non-optional)*
+- `nat_msa`: The natural MSA used for comparison. *(non-optional)*
+- `h`: A 2D array of external field parameters. *(non-optional)*
+- `J`: A 4D array of interaction parameters, should be of shape `(q, L, q, L)`. *(non-optional)*
+- `steps`: An array containing the Monte Carlo steps for the analysis. *(non-optional)*
+- `filepath`: The path where the generated plots will be saved. *(non-optional)*
+
+# Returns
+This function does not return a value; it saves the generated plots to the specified file path.
+
+# Errors
+- May throw errors related to plotting or file-saving issues, depending on the provided `filepath`.
+"""
+
 function check_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,2}, h::Array{T,2}, J::Array{T,4}, steps::Array{Int,1}, filepath::String) where {T}
     
     L, M = size(step_msa[1])
@@ -93,6 +120,32 @@ function check_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,
 end
 
 
+"""
+    info_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,2}, 
+                     h::Array{T,2}, J::Array{T,4}, steps::Array{Int,1}) where {T}
+
+Analyzes timescales from the given multiple sequence alignments and returns relevant information.
+
+# Arguments
+- `step_msa`: An array of multiple sequence alignments at different evolutionary steps. *(non-optional)*
+- `nat_msa`: The natural MSA used for comparison. *(non-optional)*
+- `h`: A 2D array of external field parameters. *(non-optional)*
+- `J`: A 4D array of interaction parameters, should be of shape `(q, L, q, L)`. *(non-optional)*
+- `steps`: An array containing the Monte Carlo steps for the analysis. *(non-optional)*
+
+# Returns
+A tuple containing:
+- `epis`: Indices of epistatic sites.
+- `varr`: Indices of variable sites.
+- `cons`: Indices of conserved sites.
+- `cde_wt`: Conditional dependency entropy of the wild type.
+- `entr`: Entropy values corresponding to the MSAs.
+
+# Errors
+- May throw errors related to mismatched sizes of input arrays.
+"""
+
+
 function info_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,2}, h::Array{T,2}, J::Array{T,4}, steps::Array{Int,1}) where {T}
     
     L, M = size(step_msa[1])
@@ -120,6 +173,22 @@ function info_timescales(step_msa::Array{Array{Int8,2},1}, nat_msa::Array{Int8,2
 end
     
    
+"""
+    pair_dist_freq(msa; n_seq::Int = 500)
+
+Calculates the frequency of pairwise Hamming distances in a multiple sequence alignment.
+
+# Arguments
+- `msa`: The multiple sequence alignment matrix. *(non-optional)*
+- `n_seq`: Number of sequences to consider for pairwise comparisons (default is `500`). *(optional)*
+
+# Returns
+- An array of frequencies for each pairwise Hamming distance.
+
+# Errors
+- Throws an error if the input MSA is not properly formatted.
+"""
+
 
 function pair_dist_freq(msa; n_seq::Int = 500)
     L = size(msa,1)
@@ -128,7 +197,23 @@ function pair_dist_freq(msa; n_seq::Int = 500)
     return count_d
 end
     
-    
+  
+"""
+    check_pairwise(f_nat::Array{T,1}, f_sim::Array{T,1}, save_path::String) where T
+
+Generates a plot comparing the frequency of pairwise Hamming distances for natural and simulated sequences.
+
+# Arguments
+- `f_nat`: Frequencies for natural sequences. *(non-optional)*
+- `f_sim`: Frequencies for simulated sequences. *(non-optional)*
+- `save_path`: The path where the generated plot will be saved. *(non-optional)*
+
+# Returns
+This function does not return a value; it saves the generated plot to the specified file path.
+
+# Errors
+- May throw errors related to plotting or file-saving issues, depending on the provided `save_path`.
+"""
 
 function check_pairwise(f_nat::Array{T,1}, f_sim::Array{T,1}, save_path::String) where T
     close("all")
