@@ -3,6 +3,41 @@
 
 **Genie.jl** is a Julia package designed to simulate the evolution of multiple sequence alignments (MSAs) based on specified parameters and conditions. Its primary function, `run_evolution`, enables users to simulate evolutionary trajectories for amino acid or nucleotide codon sequences under complex interaction parameters.
 
+
+
+# Genie.jl Evolution Simulation Package
+
+**Genie.jl** is a Julia package designed to simulate the evolution of multiple sequence alignments (MSAs) based on specified parameters and conditions. Its primary function, `run_evolution`, enables users to simulate evolutionary trajectories for amino acid or nucleotide codon sequences under complex interaction parameters.
+
+# Installing the Genie Package via Git Clone
+
+To install the Genie package directly from its Git repository, follow these steps:
+
+## 1. Clone the Repository
+Open a terminal and run the following command to clone the Genie repository:
+
+```bash
+git clone https://github.com/leonardodibari/Genie.jl.git
+```
+
+# Running the Genie Package: Using the Example Notebook or Julia REPL
+
+Once you have installed the Genie package, you can either use the example notebook provided in the `examples` folder or work directly from the Julia REPL with parallel processing.
+
+## Option 1: Using the Example Notebook
+- **Navigate to the `examples` Folder**:
+   Locate the `examples` folder inside the Genie package directory. This folder contains an example Jupyter notebook designed to help you explore Genie’s features.
+
+## Option 2: working from the Julia REPL
+- **Navigate to the Genie package folder**:
+   Open Julia in the local environment with **n threads** over which the MCMC samoling can be parallelized by doing
+
+```bash   
+../julia-1.10.0/bin/julia --project=. --thread n
+```
+- then you can directly copy each cell of the 'examples' folder in your terminal to explore Genie's features
+
+
 ## Key Function: `run_evolution`
 
 ### Overview
