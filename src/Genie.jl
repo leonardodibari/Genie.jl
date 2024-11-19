@@ -34,7 +34,7 @@ include("timescales.jl")
 include("entropy.jl")
 include("g4analysis.jl")
 include("read_write.jl")
-
+include("Phylogeny_utils.jl")
 
 include("random_potts.jl")
 include("lattice_glass.jl")

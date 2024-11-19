@@ -85,3 +85,28 @@ function single_mut_dE(seq::Array{Int8, 1}, h::Array{T,2}, J::Array{T,4}, new_aa
     end
     return delta_E
 end
+
+  
+function single_mut_dE(seq::Array{Int, 1}, h::Array{T,2}, J::Array{T,4}, new_aa, mut_pos::Int, L::Int) where {T}
+    delta_E = h[seq[mut_pos], mut_pos] - h[new_aa, mut_pos]
+    @inbounds for j in 1:L
+        delta_E += J[seq[mut_pos], mut_pos, seq[j], j] - J[new_aa, mut_pos, seq[j], j]
+    end
+    return delta_E
+end
+
+
+function get_eff_fields(seq::Array{Int8,1}, h::Array{Float64,2}, J::Array{Float64,4})
+    q,L = size(h);
+    res = zeros(size(h));
+    for a in 1:q
+        for i in 1:L
+            res[a,i] += h[a,i]
+            for j in 1:L
+                res[a,i] += J[a,i,seq[j],j] 
+            end
+        end
+    end
+    return res
+end
+           

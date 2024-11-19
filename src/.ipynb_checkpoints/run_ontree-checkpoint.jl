@@ -287,7 +287,7 @@ function assign_sequences!(node::TreeNode{Seq},
 end
 
 
-function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}}, tree_file::String, h::Array{T,2},   J::Array{T,4};
+function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}}, tree_file::String, h::Array{T,2}, J::Array{T,4};
         temp::Float64 = 1.0, 
         mu::Float64 = 1.0,
         p::Float64 = 0.5, 
