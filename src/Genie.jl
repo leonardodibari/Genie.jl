@@ -16,6 +16,7 @@ using GZip
 using Distributions
 using TreeTools
 using FastaIO
+using LsqFit
 
 import KitMSA: fasta2matrix, letter2num, num2letter, extract_params, read_par_BM, set_max_field_to_0
 
@@ -34,8 +35,6 @@ include("timescales.jl")
 include("entropy.jl")
 include("g4analysis.jl")
 include("read_write.jl")
-include("Phylogeny_utils.jl")
-
 include("random_potts.jl")
 include("lattice_glass.jl")
 

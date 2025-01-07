@@ -352,3 +352,18 @@ end
 
 
 
+function infer_felse_mu(T)
+    ds = [];ts = [];
+    for a in keys(T.lleaves)
+        for b in keys(T.lleaves)
+            push!(ts, distance(T, a, b)); 
+            push!(ds, sum(data(T[a]).seq .!== data(T[b]).seq))
+        end 
+    end
+    
+    model(x, p) = p[1] *(1 .- exp.(-p[2]*x)) 
+    p0 = [0.5, 0.5]
+    fiti = curve_fit(model, ts, ds, p0)
+    
+    return fiti.param[2]
+end

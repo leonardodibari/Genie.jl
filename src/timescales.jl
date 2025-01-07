@@ -239,10 +239,10 @@ function check_energy(path::String, nat_msa::Array{Int8,2}, msa::Array{Int8,2}, 
     
     close("all")
     # Plot the first histogram for 'nat' with no fill
-    plt.hist(en_nat, bins=30, histtype="step", color="blue", label="nat", linewidth=2)
+    plt.hist(en_nat, bins=30, histtype="step", density = true, color="blue", label="nat", linewidth=2)
 
     # Plot the second histogram for 'sim' with no fill
-    plt.hist(en_sim, bins=30, histtype="step", color="red", label="sim", linewidth=2)
+    plt.hist(en_sim, bins=30, histtype="step", density = true, color="red", label="sim", linewidth=2)
 
     # Add labels and legend
     plt.xlabel("Energy")
@@ -261,10 +261,10 @@ function check_energy(path::String, nat_msa::Array{Int8,2}, msa::Array{Int8,2}, 
     
     close("all")
     # Plot the first histogram for 'nat' with no fill
-    plt.hist(en_nat, weights = w, bins=30, histtype="step", color="blue", label="nat", linewidth=2)
+    plt.hist(en_nat, weights = w, bins=30, histtype="step", density = true, color="blue", label="nat", linewidth=2)
 
     # Plot the second histogram for 'sim' with no fill
-    plt.hist(en_sim, bins=30, histtype="step", color="red", label="sim", linewidth=2)
+    plt.hist(en_sim, bins=30, histtype="step", color="red", density = true, label="sim", linewidth=2)
 
     # Add labels and legend
     plt.xlabel("Energy")
@@ -274,4 +274,29 @@ function check_energy(path::String, nat_msa::Array{Int8,2}, msa::Array{Int8,2}, 
 
     # Save the plot to the specified path
     plt.savefig(path)
+end
+
+
+
+function check_dist_from_wt(wt::Array{T,1}, msa::Array{T,2}, msa_nat::Array{T,2}, save_path::String) where {T}
+    L = length(wt)
+    d_nat = ham_dist(wt, msa_nat) ./L
+    d_sim =  ham_dist(wt, msa) ./L
+    
+    close("all")
+    
+     # Plot the first histogram for 'nat' with no fill
+    plt.hist(d_nat, bins=30, histtype="step", density = true, color="blue", label="nat", linewidth=2)
+
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(d_sim, bins=30, histtype="step", color="red", density = true, label="sim", linewidth=2)
+
+    plt.yscale("log")
+    # Add labels and legend
+    plt.xlabel("Hamming from Wt")
+    plt.ylabel("Frequency")
+    plt.legend()
+
+    # Save the plot to the specified path
+    plt.savefig(save_path)
 end
