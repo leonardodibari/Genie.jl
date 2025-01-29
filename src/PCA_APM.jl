@@ -104,6 +104,29 @@ end
 
 
 
+function _plot_density(x, y, ax=nothing)
+        dens_c=kde((x,y));
+        ik = InterpKDE(dens_c);
+        pdf_samples = [pdf(ik, x[k], y[k]) for k=eachindex(x)]
+        if ax==nothing
+            scatter(x, y, c=pdf_samples,s=3, edgecolor=[])
+        else
+            ax.scatter(x, y, c=pdf_samples,s=3, edgecolor=[])
+        end
+    end
+
+    function plot_density(x, y, ax=nothing; filter=false)
+        if filter
+            idx = intersect(findall(isfinite.(x)), findall(isfinite.(y)))
+            return _plot_density(x[idx], y[idx], ax)
+        else
+            return _plot_density(x, y, ax)
+        end
+    end
+
+
+
+
 function check_pca(folder::String, nat_msa::Array{Int8,2}, sampled_msa::Array{Int8,2})
     pc_nat, PC, expl_var = perform_pca(nat_msa, n_dim = 2);
     pc_sil = get_projection(PC, sampled_msa);
