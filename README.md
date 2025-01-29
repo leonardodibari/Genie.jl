@@ -18,11 +18,25 @@ Please cite this article if you use Genie.jl!
 
 To install the Genie package directly from its Git repository, follow these steps:
 
-## 1. Clone the Repository
 Open a terminal and run the following command to clone the Genie repository:
 
 ```bash
 git clone https://github.com/leonardodibari/Genie.jl.git
+```
+
+then enter in the Genie.jl folder and call Julia with
+
+```bash
+julia --project
+```
+
+once inside the Julia REPL install the dependencies
+
+
+```julia
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
 ```
 
 # Running the Genie Package: Using the Example Notebook or Julia REPL
@@ -40,7 +54,7 @@ Once you have installed the Genie package, you can either use the example notebo
 ```bash   
 ../julia-1.10.0/bin/julia --project=. --thread n
 ```
-- then you can directly copy each cell of the 'examples' folder in your terminal to explore Genie's features
+- then you can directly copy each cell of the 'examples' folder in your terminal to explore Genie's features (remember to adjust the paths of the data).
 
 
 ## Key Function: `run_evolution`
