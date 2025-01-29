@@ -18,9 +18,6 @@ using TreeTools
 using FastaIO
 using LsqFit
 
-import KitMSA: fasta2matrix, letter2num, num2letter, extract_params, read_par_BM, set_max_field_to_0
-
-
 include("gibbs.jl")
 include("metropolis.jl")
 include("utils.jl")
@@ -48,6 +45,6 @@ export read_dist_from_file, run_potts, Potts_fixed_mean_conn, exchange_parameter
 export neighbours, node_energy, lattice_energy, lattice_delta_energy, swap_occupation!, initialize_lattice
 export swap_options, run_lattice_dynamics, ham_dist_AB_rp, ham_dist_AB_rp3, G4_AB, Seq, run_evolution_ontree, check_pairwise, msa_from_leafs, msa_from_nodes, pair_dist_freq, find_optimal_mu, check_energy, check_pca
 
-
+export fasta2matrix, letter2num, num2letter, extract_params, read_par_BM, vec2string
 
 end
