@@ -34,6 +34,8 @@ include("g4analysis.jl")
 include("read_write.jl")
 include("random_potts.jl")
 include("lattice_glass.jl")
+include("directed_evolution.jl")
+include("directed_evolution_nucleo.jl")
 
 
 # Write your package code here.

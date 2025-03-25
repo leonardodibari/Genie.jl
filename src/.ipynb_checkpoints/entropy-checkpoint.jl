@@ -13,7 +13,15 @@ Compute the entropy at each position in a sequence alignment frequency matrix.
 # Returns
 - `entr::Array{Float64}`: Array of entropies for each position in the sequence.
 """
-function get_entropy(f::Array{T,2}; q::Int = 21) where {T}
+
+function get_entropy(msa::Array{Int8,2}; q::Int = 21)
+    L = size(msa,1)
+    f1,f2 = compute_weighted_frequencies(msa,q+1,0.)
+    return get_entropy(reshape(f1,q,L), q = q)
+end
+
+
+function get_entropy(f::Array{Float64,2}; q::Int = 21) 
     N = length(f[1, :])
     entr = zeros(Float64, N)
     for i in 1:N

@@ -157,6 +157,7 @@ cod2amino::Dict{String, Int8} = Dict(
     "TAC" => Int8(20), "TAT" => Int8(20), "TGC" => Int8(2), "TGT" => Int8(2), "TGG" => Int8(19),
     "---" => Int8(21)
 )
+
 #=
 cod2amino = Dict( "ATA" => Int8(8), "ATC" => Int8(8), "ATT"=> Int8(8), "ATG"=> Int8(11), 
         "ACA"=>Int8(17), "ACC"=>Int8(17), "ACG"=>Int8(17), "ACT"=> Int8(17), 
@@ -241,6 +242,33 @@ function create_nested_codon_dict()
     return codon_dict
 end
 
+function create_nested_codon_dict_no_same()
+    nucleotides = ["A", "C", "G", "T"]
+    codon_dict = Dict{String, Dict{Int, Vector{String}}}()
+
+    for a in nucleotides, b in nucleotides, c in nucleotides
+        old_codon = string(a, b, c)
+        if old_codon != "TAA" && old_codon != "TAG" && old_codon != "TGA"
+            codon_dict[old_codon] = Dict{Int, Vector{String}}()
+            for i in 1:3
+                codon_list = String[]
+                for nucl in nucleotides
+                    if nucl != old_codon[i]
+                        new_codon = string(old_codon[1:i-1], nucl, old_codon[i+1:end])
+                        if new_codon != "TAA" && new_codon != "TAG" && new_codon != "TGA"
+                            push!(codon_list, new_codon)
+                        end
+                    end
+                end
+                filter!(x -> x != old_codon, codon_list)
+                codon_dict[old_codon][i] = codon_list
+            end
+        end
+    end
+
+    return codon_dict
+end
+
 
 function create_length_dict(codon_net::Dict{String, Dict{Int64, Vector{String}}})
     length_dict = Dict{Tuple{String, Int64}, Int}()
@@ -278,6 +306,7 @@ function accessible_codons(old_codon::String, codon_net::Dict{String, Dict{Int64
     codon_changes = codon_net[old_codon][nucleo_pos]
     return codon_changes
 end
+
 
 
 # Function to get accessible nucleotide mutations using the nested codon dictionary
@@ -366,4 +395,36 @@ function infer_felse_mu(T)
     fiti = curve_fit(model, ts, ds, p0)
     
     return fiti.param[2]
+end
+
+
+
+function print_fasta_to_file_rna(number_matrix,filename,name)
+	open(filename, "w") do f
+	for i in 1:length(number_matrix[:,1])
+		if i==1
+		    write(f,">1_",name," \n")
+		else
+		    write(f,"\n>$(i)_",name," \n")
+		end
+		for j in 1:length(number_matrix[1,:])
+		    if number_matrix[i,j]==1 
+		        write(f,"A")
+		    elseif number_matrix[i,j]==2
+		        write(f,"C")
+		    elseif number_matrix[i,j]==3
+		        write(f,"G")
+		    elseif number_matrix[i,j]==4
+		        write(f,"U")
+		    elseif number_matrix[i,j]==5
+		        write(f,"-")
+		    end
+		end
+	end	    
+	end
+end
+
+
+function is_positive_increasing(arr::AbstractVector)
+    all(arr .> 0) && all(diff(arr) .> 0)
 end

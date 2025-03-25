@@ -26,6 +26,34 @@ function energy(seq::Array{Int8}, h::Array{T,2}, J::Array{T,4}, L::Int) where {T
     return sum
 end
 
+function energy(seq::Array{Int}, h::Array{T,2}, J::Array{T,4}, L::Int) where {T}
+    sum = zero(T)
+    @inbounds for i in 1:L
+        sum -= h[seq[i], i]
+        @inbounds for j in i+1:L
+            sum -= J[seq[i], i, seq[j], j]
+        end
+    end
+    return sum
+end
+
+
+function energy_dna(seq, h::Array{T,2}, J::Array{T,4}, L::Int) where {T}
+    sum = zero(T)
+    @inbounds for i in 1:L
+        sum -= h[cod2amino[seq[i]], i]
+        @inbounds for j in i+1:L
+            sum -= J[cod2amino[seq[i]], i, cod2amino[seq[j]], j]
+        end
+    end
+    return sum
+end
+
+function energy_dna2(seq, h::Array{T,2}, J::Array{T,4}, L::Int) where {T}
+    seq_amino = [cod2amino[x] for x in seq]
+    return energy(seq_amino, h, J, L)
+end
+
 """
     energy(seq::Array{Int8}, h::Array{T,2}, J::Array{T,4}) where {T}
 
@@ -44,6 +72,10 @@ function energy(seq::Array{Int8}, h::Array{T,2}, J::Array{T,4}) where {T}
     return energy(seq, h, J, L)
 end
 
+function energy(seq::Array{Int}, h::Array{T,2}, J::Array{T,4}) where {T}
+    L = size(seq, 1)
+    return energy(seq, h, J, L)
+end
 """
     energy(msa::Array{Int8,2}, h::Array{T,2}, J::Array{T,4}) where {T}
 
@@ -58,6 +90,11 @@ Calculate the energy for each sequence in a multiple sequence alignment (`msa`) 
 - `energies::Array{T}`: Array of energies for each sequence in the alignment.
 """
 function energy(msa::Array{Int8,2}, h::Array{T,2}, J::Array{T,4}) where {T}
+    L, M = size(msa)
+    return [energy(msa[:, m], h, J, L) for m in 1:M]
+end
+
+function energy(msa::Array{Int,2}, h::Array{T,2}, J::Array{T,4}) where {T}
     L, M = size(msa)
     return [energy(msa[:, m], h, J, L) for m in 1:M]
 end
@@ -97,6 +134,20 @@ end
 
 
 function get_eff_fields(seq::Array{Int8,1}, h::Array{Float64,2}, J::Array{Float64,4})
+    q,L = size(h);
+    res = zeros(size(h));
+    for a in 1:q
+        for i in 1:L
+            res[a,i] += h[a,i]
+            for j in 1:L
+                res[a,i] += J[a,i,seq[j],j] 
+            end
+        end
+    end
+    return res
+end
+
+function get_eff_fields(seq::Array{Int,1}, h::Array{Float64,2}, J::Array{Float64,4})
     q,L = size(h);
     res = zeros(size(h));
     for a in 1:q
