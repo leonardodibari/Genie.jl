@@ -269,6 +269,43 @@ function create_nested_codon_dict_no_same()
     return codon_dict
 end
 
+stiffler_mut_bias = Dict(
+    ('A', 'C') => 0.07,  ('A', 'G') => 0.45,  ('A', 'T') => 0.48,
+    ('C', 'A') => 0.34,  ('C', 'G') => 0.08,  ('C', 'T') => 0.58,
+    ('G', 'A') => 0.56,  ('G', 'C') => 0.10,  ('G', 'T') => 0.34,
+    ('T', 'A') => 0.48,  ('T', 'C') => 0.44,  ('T', 'G') => 0.1
+)
+
+function create_codon_transition_dict(w::Dict{Tuple{Char, Char}, Float64})
+    nucleotides = ['A', 'C', 'G', 'T']
+    stop_codons = Set(["TAA", "TAG", "TGA"])
+    codon_list = [string(a, b, c) for a in nucleotides, b in nucleotides, c in nucleotides if string(a, b, c) ∉ stop_codons]
+
+    transition_dict = Dict{Tuple{String, String}, Float64}()
+
+    for codon in codon_list
+        for pos in 1:3  # Mutation position
+            original_nucl = codon[pos]
+
+            for new_nucl in nucleotides
+                if new_nucl != original_nucl
+                    new_codon = codon[1:(pos-1)] * string(new_nucl) * codon[(pos+1):end]
+
+                    if new_codon ∉ stop_codons
+                        prob = get(w, (original_nucl, new_nucl), 0.0)
+
+                        if prob > 0
+                            transition_dict[(codon, new_codon)] = prob
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return transition_dict
+end
+
 
 function create_length_dict(codon_net::Dict{String, Dict{Int64, Vector{String}}})
     length_dict = Dict{Tuple{String, Int64}, Int}()
@@ -428,3 +465,30 @@ end
 function is_positive_increasing(arr::AbstractVector)
     all(arr .> 0) && all(diff(arr) .> 0)
 end
+
+
+
+
+function kl_divergence_hist1d(p_samples::Vector{<:Real}, q_samples::Vector{<:Real}; nbins::Int = 50)
+    # Define common bin edges
+    min_edge = min(minimum(p_samples), minimum(q_samples))
+    max_edge = max(maximum(p_samples), maximum(q_samples))
+    edges = range(min_edge, stop=max_edge, length=nbins+1)
+
+    # Histogram counts
+    h_p = fit(Histogram, p_samples, edges)
+    h_q = fit(Histogram, q_samples, edges)
+
+    # Normalize to get discrete probability distributions
+    p = normalize(h_p.weights, 1)
+    q = normalize(h_q.weights, 1)
+
+    # Avoid division by zero with a small epsilon
+    eps = 1e-12
+    p .+= eps
+    q .+= eps
+
+    # Compute KL divergence
+    return sum(p .* log.(p ./ q))
+end
+

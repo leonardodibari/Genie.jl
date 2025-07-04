@@ -21,6 +21,33 @@ function ham_dist(vec1::Array{Int,1}, vec2::Array{Int,1})
     return sum(vec1 .!= vec2)
 end
 
+function ham_dist(vec1::Array{String,1}, vec2::Array{String,1})
+    return sum(vec1 .!= vec2)
+end
+
+# Assuming all_codons is already defined as a 61-element Vector{String}
+
+# Function to compute Hamming distance between two codons
+function cod_dist(c1::String, c2::String)
+    sum(c1[i] != c2[i] for i in 1:3)
+end
+
+function create_codon_dist_dict()
+    all_codons = vcat([amino2cod[i] for i in 1:20]...)
+    codon_distance_dict = Dict{Tuple{String, String}, Int}()
+
+    for c1 in all_codons, c2 in all_codons
+        codon_distance_dict[(c1, c2)] = codon_distance(c1, c2)
+    end
+    
+    return codon_distance_dict
+end
+
+    
+function ham_dist_deg(a::Array{String,1}, b::Array{String,1})
+    return sum([cod_dist(a[i],b[i]) for i in 1:length(a)])
+end
+
 """
     ham_dist(vec::Array{Int8,1}, msa::Array{Int8,2})
 
@@ -41,6 +68,15 @@ function ham_dist(vec::Array{Int,1}, msa::Array{Int,2})
     return [ham_dist(vec, msa[:, i]) for i in 1:size(msa, 2)]
 end
 
+function ham_dist(vec::Array{String,1}, msa::Array{String,2})
+    return [ham_dist(vec, msa[:, i]) for i in 1:size(msa, 2)]
+end
+
+
+function ham_dist_deg(vec::Array{String,1}, msa::Array{String,2})
+    return [ham_dist_deg(vec, msa[:, i]) for i in 1:size(msa, 2)]
+end
+
 """
     ham_dist(msa1::Array{Int8,2}, msa2::Array{Int8,2})
 
@@ -59,6 +95,10 @@ end
 
 function ham_dist(msa1::Array{Int,2}, msa2::Array{Int,2})
     return [ham_dist(msa1[:, i], msa2[:, i]) for i in 1:size(msa1, 2)]
+end
+
+function ham_dist_deg(msa1::Array{String,2}, msa2::Array{String,2})
+    return [ham_dist_deg(msa1[:, i], msa2[:, i]) for i in 1:size(msa1, 2)]
 end
 
 """
@@ -171,24 +211,105 @@ Calculate the pairwise Hamming distances for a given MSA.
 - `mean_dist::Float64` or `distances::Array{Float64}`: Mean pairwise Hamming distance if `all=false`, otherwise an array of pairwise distances.
 """
 function pairwise_ham_dist(msa::Array{Int8,2}; n_seq = 100, all = false)
+    L,M = size(msa)
+    new_msa = msa[:,sample(1:M,n_seq, replace = false)]
     res = []
     for i in 1:n_seq
         for j in i+1:n_seq
-            push!(res, ham_dist(msa[:, i], msa[:, j]))
+            push!(res, ham_dist(new_msa[:, i], new_msa[:, j]))
         end
     end
     return all ? res : mean(res)
 end
 
+
+function pairwise_ham_dist2(msa::Array{Int8,2}; n_seq = 100, all = false)
+    L, M = size(msa)
+    new_msa = msa[:, sample(1:M, n_seq, replace=false)]
+
+    # Create all pairs (i, j) where i < j
+    pairs = [(i, j) for i in 1:n_seq for j in i+1:n_seq]
+
+    # Compute distances in parallel using @tasks
+    res = @tasks for (i, j) in pairs
+        ham_dist(new_msa[:, i], new_msa[:, j])
+    end
+
+    return all ? res : mean(res)
+end
+
+
+function pairwise_ham_dist3(msa::Array{Int8,2}; n_seq = 100, all = false)
+    L, M = size(msa)
+    new_msa = msa[:, sample(1:M, n_seq, replace=false)]
+    println("new")
+
+    # Generate all unique pairs (i, j)
+    pairs = [(i, j) for i in 1:n_seq for j in i+1:n_seq]
+
+    # Chunk size: number of pairs per thread
+    n_threads = Threads.nthreads()
+    chunk_size = cld(length(pairs), n_threads)
+
+    # Split into chunks
+    chunks = [pairs[i:min(i+chunk_size-1, end)] for i in 1:chunk_size:length(pairs)]
+
+    # Compute Hamming distances in parallel chunks
+    partial_results = @tasks for chunk in chunks
+        map(p -> ham_dist(new_msa[:, p[1]], new_msa[:, p[2]]), chunk)
+    end
+
+    # Flatten results
+    res = reduce(vcat, partial_results)
+
+    return all ? res : mean(res)
+end
+
+
+
+
+
 function pairwise_ham_dist(msa::Array{Int,2}; n_seq = 100, all = false)
+    L,M = size(msa)
+    new_msa = msa[:,sample(1:M,n_seq, replace = false)]
+
     res = []
     for i in 1:n_seq
         for j in i+1:n_seq
-            push!(res, ham_dist(msa[:, i], msa[:, j]))
+            push!(res, ham_dist(new_msa[:, i], new_msa[:, j]))
         end
     end
     return all ? res : mean(res)
 end
+
+function pairwise_ham_dist(msa::Array{String,2}; n_seq = 100, all = false)
+    L,M = size(msa)
+    new_msa = msa[:,sample(1:M,n_seq, replace = false)]
+
+    res = []
+    for i in 1:n_seq
+        for j in i+1:n_seq
+            push!(res, ham_dist(new_msa[:, i], new_msa[:, j]))
+        end
+    end
+    return all ? res : mean(res)
+end
+
+function pairwise_ham_dist_deg(msa::Array{String,2}; n_seq = 100, all = false)
+    L,M = size(msa)
+    new_msa = msa[:,sample(1:M,n_seq, replace = false)]
+
+    res = []
+    for i in 1:n_seq
+        for j in i+1:n_seq
+            push!(res, ham_dist_deg(new_msa[:, i], new_msa[:, j]))
+        end
+    end
+    return all ? res : mean(res)
+end
+
+
+
 
 
 function ham_dist_inter_msa(msa1::Array{T,2}, msa2::Array{T,2}; shuffles = 10) where {T}
@@ -202,3 +323,4 @@ function ham_dist_inter_msa(msa1::Array{T,2}, msa2::Array{T,2}; shuffles = 10) w
 
     return res
 end
+

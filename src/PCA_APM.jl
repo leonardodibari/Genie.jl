@@ -156,6 +156,13 @@ function check_pca(nat_msa::Array{Int8,2}, sampled_msa::Array{Int8,2})
 end
 
 
+function check_pca(nat_msa::Array{Int8,2}, sampled_msa::Array{Int8,1})
+    pc_nat, PC, expl_var = perform_pca(nat_msa, n_dim = 2);
+    pc_sil = get_projection(PC, sampled_msa);
+    return pc_nat, pc_sil
+end
+
+
 function check_pca(nat_msa::Array{Int8,2}, sampled_msas::Array{Array{Int8,2},1})
     pc_nat, PC, expl_var = perform_pca(nat_msa, n_dim = 2);
     pc_sils = [get_projection(PC, sampled_msas[i]) for i in 1:length(sampled_msas)];

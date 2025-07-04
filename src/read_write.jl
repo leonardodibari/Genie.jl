@@ -1,4 +1,83 @@
-#export fasta2matrix, map_gaps, read_par_BM, read_par_BM_LR
+# è la funzione giusta per leggere i parametri
+
+
+### when in the file aminoacids are indicated as 0,1,...20
+function read_par_BM_0gapsave(path::AbstractString, q::Integer = 21)
+    params = readdlm(path,' ', use_mmap = true)[:, 2:6]
+    l_file = size(params, 1)
+    N = Integer(((q - 2) + sqrt( (q-2)^2 + 8*l_file))/(2*q))
+    J = Array{Float64}(undef, q, q, N, N)
+    h = Array{Float64}(undef, q, N)
+    n_J = Int(q*q*N*(N-1)/2)
+    n_h = q*N
+    for k in 1:n_J
+        i, j, a, b, par_j = params[k, :]
+        i += 1
+        j += 1
+        a == 0 && (a = q)
+        b == 0 && (b = q)
+        J[a, b, i, j] = par_j
+    end
+    for l in (n_J + 1): n_h + n_J
+        i, a, par_h = params[l, :]
+        i += 1
+        a == 0 && (a = q)
+        h[a, i] = par_h
+    end
+    return h, J
+end
+
+
+### when in the file aminoacids are indicated as -,A,C,...
+function read_par_BM_lettersave(path::AbstractString, q::Integer = 21)
+    params = readdlm(path,' ', use_mmap = true)[:, 2:6]
+    l_file = size(params, 1);
+    N = Integer(((q - 2) + sqrt( (q-2)^2 + 8*l_file))/(2*q));
+    J = Array{Float64}(undef, q, q, N, N);
+    h = Array{Float64}(undef, q, N);
+    n_J = Int(q*q*N*(N-1)/2);
+    n_h = q*N;
+    for k in 1:n_J
+        i, j, a, b, par_j = params[k, :]
+        i += 1
+        j += 1
+        J[letter2num(a[1]), letter2num(b[1]), i, j] = par_j
+    end
+    for l in (n_J + 1): n_h + n_J
+        i, a, par_h = params[l, :]
+        i += 1
+        h[letter2num(a[1]), i] = par_h
+    end
+    return h, J
+end
+
+
+function symmetrize_Jsave(J_old::Array{Float64, 4})
+   J_s = deepcopy(J_old)
+   q,q, N, N = size(J_old)
+   for i in 1:N
+        for j in i+1:N
+            for a in 1:q
+                for b in 1:q
+                      J_s[b, a, j, i]  = J_old[a, b, i, j]
+                end
+            end
+        end
+    end
+    return J_s
+end
+
+function set_max_field_to_0save(h_old::Array{Float64, 2}, q::Int = 21)
+   h_new = deepcopy(h_old)
+   q, N = size(h_old)
+   for i in 1:N
+        hmax = maximum([h_old[a, i] for a in 1:q])
+        h_new[:, i] .-= hmax
+   end
+   return h_new
+end
+
+
 
 id(i, a, q) = (i .- 1).*q .+ a
 

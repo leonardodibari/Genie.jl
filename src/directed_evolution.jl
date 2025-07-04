@@ -11,7 +11,7 @@ function random_mutations!(msa::Array{Int8,2}, abund_dict::Dict{Vector{Int8}, In
     L,M = size(msa)
     distrib = Binomial(L, prob_mut_one_site(mu, q = q))
     
-    for m in 1:M
+    @tasks for m in 1:M
         K = rand(distrib) #number of mutations in sequence 
         aa = rand(1:q, K)
         i = sample(1:L, K, replace = false)
@@ -42,28 +42,41 @@ end
 
 function selection!(h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{Vector{Int8}, Int64}, L::Int, M::Int; temp::T = 1., mu_bind::T = 18.6, verbose = false) where {T}
         
+    
+
+    seqs = collect(keys(abund_dict))  # Turn to indexable vector
+
+    aa = zeros(length(seqs))
+    surv_prob = Vector{Float64}(undef, length(seqs))
+
+    @tasks for i in 1:length(seqs)
+        seq = seqs[i]
+        aa[i] = exp(-((energy(seq, h, J, L) - mu_bind) / temp))
+        surv_prob[i] = aa[i] / (1 + aa[i])
+        distrib = Binomial(abund_dict[seq], surv_prob[i])
+        abund_dict[seq] = rand(distrib)
+    end
+    
+    
+
+    #=
     surv_prob = []
     for seq in keys(abund_dict)
         a = exp( - ((energy(seq, h, J, L) - mu_bind ) / temp))
         push!(surv_prob, a/(1+a))    
     end
-        
+       =# 
     #println("Extrema of surv_prob is $(extrema(surv_prob))")
     
-    idx = 1; 
+    #= idx = 1; 
     for seq in keys(abund_dict)
         distrib = Binomial(abund_dict[seq], surv_prob[idx])
         abund_dict[seq] = rand(distrib)
         idx+=1    
-    end
+    end =#
     
     clean_dict!(abund_dict)
-    
-    #=cc = 0
-    for val in values(abund_dict)
-        cc += val
-    end
-    println(cc)=#
+
     if verbose == true    
         println("$(100*length(abund_dict)/M) % unique seqs after selection")
     end
@@ -84,7 +97,7 @@ function amplification!(final_msa::Array{Int8,2}, abund_dict::Dict{Vector{Int8},
     
     idxs = sample(1:M, Weights(w), Mf);
     
-    for m in 1:Mf
+    @tasks for m in 1:Mf
         for i in 1:L
             final_msa[i,m] = seqs[idxs[m]][i]
         end
@@ -217,5 +230,4 @@ function run_dir_evol(start_seq, N_start::Int, h::Array{T,2}, J::Array{T,4};
                    q = q,
                    verbose = verbose) 
 end
-
 

@@ -300,3 +300,58 @@ function check_dist_from_wt(wt::Array{T,1}, msa::Array{T,2}, msa_nat::Array{T,2}
     # Save the plot to the specified path
     plt.savefig(save_path)
 end
+
+
+
+function check_energy3(path::String, pre_msa::Array{Int8,2}, mid_msa::Array{Int8,2}, post_msa::Array{Int8,2}, h::Array{Float64,2}, J::Array{Float64,4})
+    en_pre = energy(pre_msa, h, J)
+    en_mid = energy(mid_msa, h, J)
+    en_post = energy(post_msa, h, J)
+    
+    close("all")
+    # Plot the first histogram for 'nat' with no fill
+    plt.hist(en_pre, bins=30, histtype="step", density = true, color="blue", label="Pre_sel", linewidth=2)
+
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(en_mid, bins=30, histtype="step", color="red", density = true, label="Post_sel", linewidth=2)
+    
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(en_post, bins=30, histtype="step", color="green", density = true, label="Post_ampl", linewidth=2)
+
+    # Add labels and legend
+    plt.xlabel("Energy")
+    plt.ylabel("Frequency")
+    plt.yscale("log")
+    plt.legend()
+
+    # Save the plot to the specified path
+    plt.savefig(path)
+end
+
+function check_dist_from_wt3(wt::Array{T,1}, pre_msa::Array{T,2}, mid_msa::Array{T,2}, post_msa::Array{T,2}, save_path::String) where {T}
+    L = length(wt)
+    d_pre = ham_dist(wt, pre_msa) ./L
+    d_mid =  ham_dist(wt, mid_msa) ./L
+    d_post =  ham_dist(wt, post_msa) ./L
+    
+    close("all")
+    
+     # Plot the first histogram for 'nat' with no fill
+    plt.hist(d_pre, bins=30, histtype="step", density = true, color="blue", label="Pre_sel", linewidth=2)
+
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(d_mid, bins=30, histtype="step", color="red", density = true, label="Post_sel", linewidth=2)
+    
+    
+    # Plot the second histogram for 'sim' with no fill
+    plt.hist(d_post, bins=30, histtype="step", color="green", density = true, label="Post_ampl", linewidth=2)
+
+    plt.yscale("log")
+    # Add labels and legend
+    plt.xlabel("Hamming from Wt")
+    plt.ylabel("Frequency")
+    plt.legend()
+
+    # Save the plot to the specified path
+    plt.savefig(save_path)
+end

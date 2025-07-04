@@ -20,6 +20,12 @@ function get_entropy(msa::Array{Int8,2}; q::Int = 21)
     return get_entropy(reshape(f1,q,L), q = q)
 end
 
+function get_entropy(msa::Array{Int,2}; q::Int = 21)
+    L = size(msa,1)
+    f1,f2 = compute_weighted_frequencies(msa,q+1,0.)
+    return get_entropy(reshape(f1,q,L), q = q)
+end
+
 
 function get_entropy(f::Array{Float64,2}; q::Int = 21) 
     N = length(f[1, :])
@@ -51,6 +57,19 @@ Calculate the conditional probability for each state at a single position, given
 - `prob::Array{T}`: Array of conditional probabilities for each state at position `k`.
 """
 function single_site_prob_cond(k::Int, mutated_seq::Array{Int8,1}, h::Array{T,2}, J::Array{T,4}, L::Int; q::Int = 21) where {T}
+    prob = T.(zeros(q))
+    for i in 1:q
+        q_k = i
+        log_proba = h[q_k, k]
+        for j in 1:L
+            log_proba += J[mutated_seq[j], j, q_k, k]
+        end
+        prob[i] = exp(log_proba)
+    end
+    return normalize(prob, 1)
+end
+
+function single_site_prob_cond(k::Int, mutated_seq::Array{Int,1}, h::Array{T,2}, J::Array{T,4}, L::Int; q::Int = 21) where {T}
     prob = T.(zeros(q))
     for i in 1:q
         q_k = i
@@ -101,6 +120,19 @@ Calculate the conditional probability for each state at a position, with a tempe
 - `prob::Array{T}`: Array of conditional probabilities for each state at position `k`.
 """
 function single_site_prob_cond_with_T(k::Int, mutated_seq::Array{Int8,1}, h::Array{T,2}, J::Array{T,4}, L::Int; q::Int = 21, temp = 1.0) where {T}
+    prob = T.(zeros(q))
+    for i in 1:q
+        q_k = i
+        log_proba = h[q_k, k]
+        for j in 1:L
+            log_proba += J[mutated_seq[j], j, q_k, k]
+        end
+        prob[i] = exp(log_proba / temp)
+    end
+    return normalize(prob, 1)
+end
+
+function single_site_prob_cond_with_T(k::Int, mutated_seq::Array{Int,1}, h::Array{T,2}, J::Array{T,4}, L::Int; q::Int = 21, temp = 1.0) where {T}
     prob = T.(zeros(q))
     for i in 1:q
         q_k = i

@@ -1,3 +1,37 @@
+function correlations(nf;
+    lambdaJ::Real=0.0001,
+    lambdaH::Real=0.0001,
+    theta::Union{Symbol,Real}=:auto,
+    max_gap_fraction::Real=0.9,
+    remove_dups::Bool=true,
+    q=21,
+    nsamples=10_000)
+
+    Wnat, Znat, _,_,_ = ArDCA.read_fasta(nf, max_gap_fraction, theta, remove_dups)
+    L = size(Znat,1)
+    #println(L)
+    arnet, arvar=ardca(nf, lambdaJ=lambdaJ, lambdaH=lambdaH)
+    Zgen = sample(arnet, nsamples)
+    Pinat, Pijnat = DCAUtils.compute_weighted_frequencies(Int8.(Znat), Wnat, q + 1)
+    Pigen, Pijgen = DCAUtils.compute_weighted_frequencies(Int8.(Zgen), 1.0 ./ ones(nsamples), q + 1)
+    Cgen  = reshape(Pijgen - Pigen * Pigen',q,L,q,L)
+    Cnat  = reshape(Pijnat - Pinat * Pinat',q,L,q,L)
+    Cnatod = Float64[]
+    Cgenod = Float64[]
+    for a =1:q
+        for i=1:L-1
+            for b=1:q
+                for j=i+1:L
+                    push!(Cnatod, Cnat[a,i,b,j])
+                    push!(Cgenod, Cgen[a,i,b,j])
+                end
+            end
+        end
+    end
+    return (Cgen=Cgenod, Cnat=Cnatod, Pigen=Pigen, Pinat=Pinat)
+    
+end
+
 
 function pseudocount1(f1, pc, q::Int)
      return ((1-pc) .* f1 ) .+ (pc / q)
@@ -17,7 +51,7 @@ function reweight(msa,theta)
     return res
 end
 
-function conn_corr(msa, nat_msa, q, L; nat_weight = 0.2, sim_weight = 0.)
+function conn_corr(msa, nat_msa, q::Int, L::Int; nat_weight::Float64 = 0.2, sim_weight::Float64 = 0.)
 
     f1_nat_ql, f2_nat_ql = compute_weighted_frequencies(nat_msa, 22, nat_weight); 
     f1_nat = reshape(f1_nat_ql,q,L); 
@@ -45,6 +79,57 @@ function conn_corr(msa, nat_msa, q, L; nat_weight = 0.2, sim_weight = 0.)
     println(cor(c_nat[:], c[:]))
     println(cor(c_nat_ql[:], c_ql[:]))
     
+end
+
+
+
+function conn_corr(ff1::Array{T,1}, ff2::Array{T,1}, ff1_nat::Array{T,1}, ff2_nat::Array{T,2}) where {T}
+ 
+    ql = length(ff1);
+    q = 21; L = round(Int, ql/q);
+    
+    f1_nat = reshape(ff1_nat,q,L); 
+    f2_nat = reshape(ff2_nat,q,L,q,L);
+    
+    f1 = reshape(ff1,q,L); 
+    f2 = reshape(ff2,q,L,q,L);   
+
+    c_nat = []; c = []; 
+    for i in 1:L
+        for j in i+1:L
+            for a in 1:q
+                for b in 1:q
+                    push!(c_nat, f2_nat[a,i,b,j] - f1_nat[a,i] * f1_nat[b,j])
+                    push!(c, f2[a,i,b,j] - f1[a,i] * f1[b,j])                    
+                end
+            end
+        end
+    end
+
+
+    return c, c_nat
+    
+end
+
+
+function conn_corr(ff1::Array{T,1}, ff2::Array{T,2}) where {T}
+ 
+    ql = length(ff1);
+    q = 21; L = round(Int, ql/q);
+    
+    cc = reshape(ff2 - ff1*ff1', q, L, q, L)
+    c = []; 
+    for i in 1:L
+        for j in i+1:L
+            for a in 1:q
+                for b in 1:q
+                    push!(c, cc[a,i,b,j])                    
+                end
+            end
+        end
+    end
+    
+    return c
 end
 
 
