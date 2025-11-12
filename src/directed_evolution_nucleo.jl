@@ -236,7 +236,8 @@ function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{Stri
                    q::Int = 21,
                    codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
                    mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
-                   verbose = false) where {T}
+                   verbose = false,
+                   neutral = false) where {T}
     
     L,M = size(start_msa);
     
@@ -331,9 +332,13 @@ function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{Stri
             pre_sel_step_msa[count2] .= final_msa[:,idxs]
             pre_sel_step_msa_dna[count2] .= final_msa_dna[:,idxs]
         end 
-        
-        Genie.selection_nucleo!(h, J, abund_dict_nucleo, codon_usage, L, M, temp = temp, mu_bind = mu_bind, verbose = verbose);
-        
+
+        if neutral == false
+            Genie.selection_nucleo!(h, J, abund_dict_nucleo, codon_usage, L, M, temp = temp, mu_bind = mu_bind, verbose = verbose);
+        else
+            clean_dict_nucleo!(abund_dict_nucleo)
+        end
+            
         
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
             flattened_dna = Vector{Vector{String}}()
@@ -390,7 +395,8 @@ function run_dir_evol_nucleo(start_seq::Array{Int8,1}, N_start::Int, h::Array{T,
                    mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
                    codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
                    q::Int = 21,
-                   verbose = false) where {T}
+                   verbose = false,
+                   neutral = false) where {T}
     
     
     start_msa = hcat([start_seq for i in 1:N_start]...);
@@ -406,7 +412,8 @@ function run_dir_evol_nucleo(start_seq::Array{Int8,1}, N_start::Int, h::Array{T,
                    codon_bias = codon_bias,
                    mut_bias = mut_bias,
                    q = q,
-                   verbose = verbose) 
+                   verbose = verbose,
+                   neutral = neutral) 
 end
 
 function run_dir_evol_nucleo(start_seq::Array{String,1}, N_start::Int, h::Array{T,2}, J::Array{T,4};
@@ -420,7 +427,8 @@ function run_dir_evol_nucleo(start_seq::Array{String,1}, N_start::Int, h::Array{
                    codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
                    mu_bind::Float64 = 18.6,
                    q::Int = 21,
-                   verbose = false) where {T}
+                   verbose = false,
+                   neutral = false) where {T}
     
     
     
@@ -437,7 +445,8 @@ function run_dir_evol_nucleo(start_seq::Array{String,1}, N_start::Int, h::Array{
                    codon_bias = codon_bias,
                    mut_bias = mut_bias,
                    q = q,
-                   verbose = verbose) 
+                   verbose = verbose,
+                   neutral = neutral) 
 end
 
 
