@@ -1,59 +1,239 @@
+struct SeqWithParent
+    seq::Vector{String}
+    parent::Union{Vector{String}, Nothing}
+end
 
-function selection_nucleo_mcmc_inspired!(h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{Vector{String}, Int64}, codon_usage::Dict{String, Float64}, L::Int, M::Int; temp::T = 1., verbose = false) where {T}
-        
-    
+Base.:(==)(a::SeqWithParent, b::SeqWithParent) = a.seq == b.seq && a.parent == b.parent
+Base.hash(x::SeqWithParent, h::UInt) = hash((x.seq, x.parent), h)
 
-    seq_dna = collect(keys(abund_dict))  # Turn to indexable vector
 
-    aa = zeros(length(seq_dna))
-    surv_prob = Vector{Float64}(undef, length(seq_dna))
-    ens = zeros(length(seq_dna))
-    
-    @tasks for i in 1:length(seq_dna)
-        ens[i] = energy_dna2(seq_dna[i], h, J, L)
-    end
-    
-    mu_bind = mean(ens)[1];
-    
 
-    @tasks for i in 1:length(seq_dna)
-        if "TAG" in seq || "TAA" in seq || "TGA" in seq
-            surv_prob[i] = 0.
-        else
-            aa[i] = exp( - ((ens[i] - mu_bind ) / temp))
-            p = 1. #inv_degeneracy(seq_dna[i], codon_usage)
-            surv_prob[i] = (p*aa[i])/(1+aa[i])
+function random_mutations_nucleo_mcmc_inspired!(
+    msa::Matrix{Int8}, msa_dna::Matrix{String}, 
+    codon_net::Dict{String, Dict{Int, Vector{String}}}, 
+    length_of_moves::Dict{Tuple{String, Int64}, Int64},
+    codon_list::Vector{Vector{String}},
+    abund_dict::Dict{SeqWithParent, Int64},   # << change here!
+    mu::T; 
+    q::Int = 4,
+    verbose = false
+) where {T}
+
+    L, M = size(msa)
+    distrib = Binomial(L, prob_mut_one_site(mu, q = q))
+
+    all_nucleos = ['A','C', 'G', 'T']
+    empty!(abund_dict)  # clear dict before filling
+
+    for m in 1:M
+        parent_seq = [msa_dna[seq_site, m] for seq_site in 1:L]  # collect original sequence as Vector{String}
+        K = rand(distrib)  # number of mutations 
+        pos = sample(1:3*L, K, replace=false)  # mutation positions
+
+        child_seq = copy(parent_seq)  # start from parent sequence
+
+        for k in 1:K
+            seq_site = div(pos[k]-1, 3) + 1
+            nucleo_site = mod(pos[k]-1, 3) + 1
+
+            if child_seq[seq_site] == "21"
+                # no mutation if 21 (stop codon?) - adjust logic as needed
+            else
+                L_moves = length_of_moves[(child_seq[seq_site], nucleo_site)]
+                if L_moves == 1
+                    child_seq[seq_site] = accessible_codons(child_seq[seq_site], codon_net, nucleo_site)[1]
+                else
+                    codon_list[L_moves] .= accessible_codons(child_seq[seq_site], codon_net, nucleo_site)
+                    child_seq[seq_site] = sample(codon_list[L_moves])
+                end
+            end
         end
-        distrib = Binomial(abund_dict[seq_dna[i]], surv_prob[i])
-        abund_dict[seq_dna[i]] = rand(distrib)
+
+        # Create struct storing child and parent sequences
+        seq_struct = SeqWithParent(child_seq, parent_seq)
+
+        # Update dictionary counts
+        abund_dict[seq_struct] = get(abund_dict, seq_struct, 0) + 1
     end
-  
-    clean_dict_nucleo!(abund_dict)
-    
-    if verbose == true
-        println("$(100*length(abund_dict)/M) % unique seqs after selection")
+
+    clean_dict_nucleo!(abund_dict)  # optional, if you want to clean zeros
+
+    if verbose
+        println("$(100 * length(abund_dict) / M) % unique seqs after mutagenesis")
+    end
+end
+
+function random_mutations_nucleo_mcmc!(
+    msa::Matrix{Int8}, msa_dna::Matrix{String}, 
+    codon_net::Dict{String, Dict{Int, Vector{String}}}, 
+    length_of_moves::Dict{Tuple{String, Int64}, Int64},
+    codon_list::Vector{Vector{String}},
+    abund_dict::Dict{SeqWithParent, Int64}, 
+    mu::T; 
+    q::Int = 4,
+    temp::T = 1.,
+    verbose = false
+) where {T}
+
+    L, M = size(msa)
+    distrib = Binomial(L, prob_mut_one_site(mu, q = q))
+
+    all_nucleos = ['A','C', 'G', 'T']
+    empty!(abund_dict)  # clear dict before filling
+
+    for m in 1:M
+        parent_seq = [msa_dna[seq_site, m] for seq_site in 1:L]  # collect original sequence as Vector{String}
+        K = rand(distrib)  # number of mutations 
+        pos = sample(1:3*L, K, replace=false)  # mutation positions
+
+        child_seq = copy(parent_seq)  # start from parent sequence
+
+        for k in 1:K
+            seq_site = div(pos[k]-1, 3) + 1
+            nucleo_site = mod(pos[k]-1, 3) + 1
+
+            if child_seq[seq_site] == "21"
+                # no mutation if 21 (stop codon?) - adjust logic as needed
+            else
+                L_moves = length_of_moves[(child_seq[seq_site], nucleo_site)]
+                if L_moves == 1
+                    child_seq[seq_site] = accessible_codons(child_seq[seq_site], codon_net, nucleo_site)[1]
+                    en_child = energy_dna2(child_seq, h, J, L)
+                    en_parent = energy_dna2(parent_seq, h, J, L)
+                    if rand()<exp(-(en_child-en_parent)/temp)
+                        # Create struct storing child and parent sequences
+                        seq_struct = SeqWithParent(child_seq, parent_seq)
+                        # Update dictionary counts
+                        abund_dict[seq_struct] = get(abund_dict, seq_struct, 0) + 1
+                    else
+                        # Create struct storing parent sequence
+                        seq_struct = SeqWithParent(parent_seq, parent_seq)
+                        # Update dictionary counts
+                        abund_dict[seq_struct] = get(abund_dict, seq_struct, 0) + 1
+                    end
+                        
+                else
+                    codon_list[L_moves] .= accessible_codons(child_seq[seq_site], codon_net, nucleo_site)
+                    child_seq[seq_site] = sample(codon_list[L_moves])
+                    en_child = energy_dna2(child_seq, h, J, L)
+                    en_parent = energy_dna2(parent_seq, h, J, L)
+                    if rand()<exp(-(en_child-en_parent)/temp)
+                        # Create struct storing child and parent sequences
+                        seq_struct = SeqWithParent(child_seq, parent_seq)
+                        # Update dictionary counts
+                        abund_dict[seq_struct] = get(abund_dict, seq_struct, 0) + 1
+                    else
+                        # Create struct storing parent sequence
+                        seq_struct = SeqWithParent(parent_seq, parent_seq)
+                        # Update dictionary counts
+                        abund_dict[seq_struct] = get(abund_dict, seq_struct, 0) + 1
+                    end
+                end
+            end
+        end
+    end
+
+    clean_dict_nucleo!(abund_dict)  # optional, if you want to clean zeros
+
+    if verbose
+        println("$(100 * length(abund_dict) / M) % unique seqs after mutagenesis")
     end
 end
 
 
+function selection_nucleo_mcmc_inspired!(
+    h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{SeqWithParent, Int64}, 
+    codon_usage::Dict{String, Float64}, L::Int, M::Int; 
+    temp::T = 1., verbose = false
+) where {T}
 
-function run_dir_evol_nucleo_mcmc_inspired(start_msa::Array{Int8,2}, start_msa_dna::Array{String, 2}, h::Array{T,2}, J::Array{T,4};
-                   rounds::Int = 4, 
-                   each_step::Union{Int, Nothing} = nothing,
-                   seq_steps::Union{Int, Nothing} = nothing,
-                   seq_reads::Int = 100,
-                   temp::Float64 = 1.0,  
-                   mu::T = 10^-2,
-                   q::Int = 21,
-                   codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
-                   mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
-                   verbose = false) where {T}
+    seq_structs = collect(keys(abund_dict))
+
+    aa = zeros(length(seq_structs))
+    surv_prob = Vector{Float64}(undef, length(seq_structs))
+    ens = zeros(length(seq_structs))
+    mu_bind = zeros(length(seq_structs))
+
+    @tasks for i in 1:length(seq_structs)
+        child_seq = seq_structs[i].seq
+        parent_seq = seq_structs[i].parent
+
+        ens[i] = energy_dna2(child_seq, h, J, L)
+
+        # Compute parent's energy (if parent exists)
+        if parent_seq === nothing
+            mu_bind[i] = 0.0  # or some default value if no parent
+        else
+            mu_bind[i] = energy_dna2(parent_seq, h, J, L)
+        end
+    end
+
+    @tasks for i in 1:length(seq_structs)
+        seq = seq_structs[i].seq
+        if any(codon -> codon == "TAG" || codon == "TAA" || codon == "TGA", seq)
+            surv_prob[i] = 0.0
+        else
+            aa[i] = exp(-((ens[i] - mu_bind[i]) / temp))
+            p = 1.0  # or your inv_degeneracy(seq, codon_usage)
+            surv_prob[i] = (p * aa[i]) / (1 + aa[i])
+        end
+
+        distrib = Binomial(abund_dict[seq_structs[i]], surv_prob[i])
+        abund_dict[seq_structs[i]] = rand(distrib)
+    end
+
+    clean_dict_nucleo!(abund_dict)
+
+    if verbose
+        println("$(100 * length(abund_dict) / M) % unique seqs after selection")
+    end
+end
+
+
+function amplification_nucleo_mcmc_inspired!(
+    final_msa::Array{Int8,2}, final_msa_dna::Array{String,2}, 
+    abund_dict::Dict{SeqWithParent, Int64}
+)
+    L, Mf = size(final_msa)
+    
+    seq_structs = collect(keys(abund_dict))
+    
+    # Extract child sequences from SeqWithParent keys
+    seqs_dna = [s.seq for s in seq_structs]
+    
+    w = [abund_dict[s] for s in seq_structs]
+    
+    M = length(seqs_dna)
+    
+    idxs = sample(1:M, Weights(w), Mf)
+    
+    @tasks for m in 1:Mf
+        for i in 1:L
+            final_msa_dna[i, m] = seqs_dna[idxs[m]][i]
+            final_msa[i, m] = cod2amino[final_msa_dna[i, m]]
+        end
+    end
+end
+
+
+function run_dir_evol_nucleo_mcmc_inspired(
+        start_msa::Array{Int8,2}, start_msa_dna::Array{String, 2}, h::Array{T,2}, J::Array{T,4};
+        rounds::Int = 4, 
+        each_step::Union{Int, Nothing} = nothing,
+        seq_steps::Union{Int, Nothing} = nothing,
+        seq_reads::Int = 100,
+        temp::Float64 = 1.0,  
+        mu::T = 10^-2,
+        q::Int = 21,
+        codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
+        mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
+        verbose = false
+    ) where {T}
     
     L,M = size(start_msa);
     
-    
     if M < seq_reads
-        error("Increase number of sequences, seq_reads must be smaller than amount of sequeces")
+        error("Increase number of sequences, seq_reads must be smaller than amount of sequences")
     end
     
     if (size(J,1) !== size(J,3)) || (size(J,2) !== size(J,4))
@@ -108,13 +288,22 @@ function run_dir_evol_nucleo_mcmc_inspired(start_msa::Array{Int8,2}, start_msa_d
     push!(all_codons, "TGA")
     final_msa = deepcopy(start_msa);
     final_msa_dna = deepcopy(start_msa_dna);
-    abund_dict_nucleo = Dict{Vector{String},Int}()
+    
+    # Initialize abund_dict_nucleo with SeqWithParent (parent = nothing for initial sequences)
+    abund_dict_nucleo = Dict{SeqWithParent, Int}()
+    for m in 1:M
+        seq_copy = copy(start_msa_dna[:, m])
+        abund_dict_nucleo[SeqWithParent(seq_copy, nothing)] = 1
+    end
+    
     codon_list = [Vector{String}(undef, i) for i in 1:4]
     prob_codon_list = [Vector{Float64}(undef, i) for i in 1:4]
 
     if codon_bias == nothing
         no_cod_bias = Dict(x => T(1/length(amino2cod[cod2amino[x]])) for x in keys(cod2amino))
         codon_usage = no_cod_bias
+    else
+        codon_usage = codon_bias
     end
     
     if mut_bias !== nothing
@@ -127,15 +316,10 @@ function run_dir_evol_nucleo_mcmc_inspired(start_msa::Array{Int8,2}, start_msa_d
             println("Round $(r)")
         end
         
-        if mut_bias == nothing 
-            Genie.random_mutations_nucleo!(final_msa, final_msa_dna, codon_net, 
+        Genie.random_mutations_nucleo_mcmc_inspired!(final_msa, final_msa_dna, codon_net, 
                 length_of_moves, codon_list, abund_dict_nucleo, mu, verbose = verbose);
-        else
-            Genie.random_mutations_nucleo_biased!(final_msa, final_msa_dna, codon_net, 
-                length_of_moves, codon_list, prob_codon_list, abund_dict_nucleo, mu, 
-                trans_dict, verbose = verbose);
-        end
-
+    
+        
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
             count2+=1
             idxs = rand(1:M,seq_reads)
@@ -145,17 +329,16 @@ function run_dir_evol_nucleo_mcmc_inspired(start_msa::Array{Int8,2}, start_msa_d
         
         Genie.selection_nucleo_mcmc_inspired!(h, J, abund_dict_nucleo, codon_usage, L, M, temp = temp, verbose = verbose);
         
-        
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
             flattened_dna = Vector{Vector{String}}()
 
-            for (vec, count) in abund_dict_nucleo
-                append!(flattened_dna, fill(vec, count))
+            # Flatten using .seq field from SeqWithParent
+            for (swp, count) in abund_dict_nucleo
+                append!(flattened_dna, fill(swp.seq, count))
             end
             
             mat_dna = hcat(flattened_dna...)
             println(size(mat_dna))
-            
             
             push!(post_sel_step_msa_dna, mat_dna)
             
@@ -170,9 +353,8 @@ function run_dir_evol_nucleo_mcmc_inspired(start_msa::Array{Int8,2}, start_msa_d
             push!(post_sel_step_msa, mat)
         end
         
-        
         clean_dict_nucleo!(abund_dict_nucleo)
-        Genie.amplification_nucleo!(final_msa, final_msa_dna, abund_dict_nucleo)  
+        Genie.amplification_nucleo_mcmc_inspired!(final_msa, final_msa_dna, abund_dict_nucleo)  
         
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
             count+=1

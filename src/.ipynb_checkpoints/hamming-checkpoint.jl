@@ -223,48 +223,6 @@ function pairwise_ham_dist(msa::Array{Int8,2}; n_seq = 100, all = false)
 end
 
 
-function pairwise_ham_dist2(msa::Array{Int8,2}; n_seq = 100, all = false)
-    L, M = size(msa)
-    new_msa = msa[:, sample(1:M, n_seq, replace=false)]
-
-    # Create all pairs (i, j) where i < j
-    pairs = [(i, j) for i in 1:n_seq for j in i+1:n_seq]
-
-    # Compute distances in parallel using @tasks
-    res = @tasks for (i, j) in pairs
-        ham_dist(new_msa[:, i], new_msa[:, j])
-    end
-
-    return all ? res : mean(res)
-end
-
-
-function pairwise_ham_dist3(msa::Array{Int8,2}; n_seq = 100, all = false)
-    L, M = size(msa)
-    new_msa = msa[:, sample(1:M, n_seq, replace=false)]
-    println("new")
-
-    # Generate all unique pairs (i, j)
-    pairs = [(i, j) for i in 1:n_seq for j in i+1:n_seq]
-
-    # Chunk size: number of pairs per thread
-    n_threads = Threads.nthreads()
-    chunk_size = cld(length(pairs), n_threads)
-
-    # Split into chunks
-    chunks = [pairs[i:min(i+chunk_size-1, end)] for i in 1:chunk_size:length(pairs)]
-
-    # Compute Hamming distances in parallel chunks
-    partial_results = @tasks for chunk in chunks
-        map(p -> ham_dist(new_msa[:, p[1]], new_msa[:, p[2]]), chunk)
-    end
-
-    # Flatten results
-    res = reduce(vcat, partial_results)
-
-    return all ? res : mean(res)
-end
-
 
 
 
@@ -309,7 +267,14 @@ function pairwise_ham_dist_deg(msa::Array{String,2}; n_seq = 100, all = false)
 end
 
 
-
+function minimum_ham_dist_inter_msa(msa1::Array{T,2}, msa2::Array{T,2}) where {T}
+    L,M = size(msa1)
+    res = zeros(M)
+    @tasks for m in 1:M
+        res[m] = minimum(ham_dist(msa1[:,m], msa2))
+    end
+    return res
+end
 
 
 function ham_dist_inter_msa(msa1::Array{T,2}, msa2::Array{T,2}; shuffles = 10) where {T}

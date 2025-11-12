@@ -267,7 +267,14 @@ function pairwise_ham_dist_deg(msa::Array{String,2}; n_seq = 100, all = false)
 end
 
 
-
+function minimum_ham_dist_inter_msa(msa1::Array{T,2}, msa2::Array{T,2}) where {T}
+    L,M = size(msa1)
+    res = zeros(M)
+    @tasks for m in 1:M
+        res[m] = minimum(ham_dist(msa1[:,m], msa2))
+    end
+    return res
+end
 
 
 function ham_dist_inter_msa(msa1::Array{T,2}, msa2::Array{T,2}; shuffles = 10) where {T}

@@ -82,6 +82,8 @@ function run_evolution(start_msa, h::Array{T,2}, J::Array{T,4};
     if codon_bias == nothing
         no_cod_bias = Dict(x => T(1/length(amino2cod[cod2amino[x]])) for x in keys(cod2amino))
         codon_usage = no_cod_bias
+    else
+        codon_usage = codon_bias
     end
     
     if rand_init == true

@@ -1,0 +1,69 @@
+#!/bin/bash
+#SBATCH --job-name=mcmc_array
+#SBATCH --output=logs/mcmc_%A_%a.out
+#SBATCH --error=logs/mcmc_%A_%a.err
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=4G
+#SBATCH --time=01:00:00
+#SBATCH --array=1-10
+
+# Load Julia module if needed
+module load julia
+
+# Set threads
+export JULIA_NUM_THREADS=10
+
+# Read parameters from file
+PARAMS=$(sed -n "${SLURM_ARRAY_TASK_ID}p" params.txt)
+TEMP=$(echo $PARAMS | awk '{print $1}')
+NSTEPS=$(echo $PARAMS | awk '{print $2}')
+
+# Run the Julia script
+julia --project=. scripts/launch_MCMC.jl \
+  -wt_name TEM \
+  -Nseqs 105 \
+  -Nsteps $NSTEPS \
+  -Npairs 101 \
+  -temp $TEMP \
+  -file_wt ../data/TEM1_pfam_DNA.fasta \
+  -file_model ../data/model_natural_PSE.dat
+
+
+
+
+
+
+#!/bin/bash
+
+#SBATCH --partition=Long
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --job-name=gridsearch_mcmc_TEM
+#SBATCH --output=/home/ldibari/simulation_data/launch_scripts/job_output/job_out%A.out
+#SBATCH --error=/home/ldibari/simulation_data/launch_scripts/job_output/job_err%A.err
+
+#SBATCH --time=400:00:00
+#SBATCH --mail-user=db.leonardo1999@gmail.com --mail-type=END --mail-type=FAIL
+
+julia --threads=1  --project=../../Genie.jl launch_MCMC.jl -wt_name TEM -Nseqs 105 -Nsteps 102 -Npairs 101 -temp 1.1 -file_wt ../../data/TEM1_pfam_DNA.fasta -file_model ../../data/model_natural_PSE.dat  -output_folder ../TEM/mcmc/ 
+
+
+
+guarda epm random orientation job multiple
+
+
+################# come lanciare, ti dice job identifier ##################
+$ sbatch job
+Submitted batch job 3876650
+
+
+############ come controllare se è finito
+
+srossi@eris ~/ldibari/simulation_data/launch_scripts
+$ squeue -u srossi
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+       3870553_125      Long R15_L512   srossi CG 3-21:23:46      1 node07
+       
+       
+       R è running, CG è bloccato
