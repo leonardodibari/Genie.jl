@@ -1,6 +1,6 @@
 using Genie, DelimitedFiles, DCAUtils, JLD2, PyPlot, Statistics, LinearAlgebra
 import KitMSA: fasta2matrix, matrix2fasta, cod2amino, amino2cod
-using PhyloTools, TreeTools # Required for MCMCTree simulation
+using TreeTools # Required for MCMCTree simulation
 import KitMSA # Ensures functions like cod2amino are available
 
 # Define a struct to hold all parameters read from the CSV
