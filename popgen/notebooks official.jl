@@ -313,8 +313,7 @@ compare_replicates(
         "../simulation_data/PSE/mcmc/PSE_mcmc_samples100000_T1.3_steps120_pairs10000.fa",
         "../simulation_data/PSE/popgen/PSE_popgen_samples100000_T12.0_mu0.03_mubind-50.0_pairs10000.fa",
         "../simulation_data/PSE/mcmctree/PSE_mcmctree_T1.4_steps110_pairs10000.fa",
-        "../simulation_data/PSE/popgen/PSE_popgen_samples10000_T0.0_mu0.03_mubind-50.0_pairs10000.fa"
-    ]
+        "../simulation_data/PSE/neutral/PSE_neutral_samples100000_T0.0_mu0.012_mubind0.0_pairs10000.fa"]
     labels = ["Exp", "MCMC", "Pop Gen", "MCMC on tree", "Neutral evolution"]
     colors = ["black", "red", "green", "blue", "grey"]
 

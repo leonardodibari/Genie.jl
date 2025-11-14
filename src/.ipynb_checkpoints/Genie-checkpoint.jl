@@ -18,6 +18,7 @@ using Distributions
 using TreeTools
 using FastaIO
 using LsqFit
+using TreeTools
 
 import Flux: relu
 

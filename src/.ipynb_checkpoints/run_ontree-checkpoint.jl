@@ -35,6 +35,22 @@ function Storage(start_seq::Array{Int,1}, tree_file::String, generator::Xoshiro;
         log_prob2, log_prob3, log_prob4)
 end
 
+function Storage(start_seq2::Array{String,1}, tree_file::String, generator::Xoshiro; T::DataType = Float64, Ti::DataType=Int)
+    
+    tree = read_tree(tree_file, node_data_type = Seq)
+    dna_seq = copy(start_seq2)
+    start_seq = Int.([cod2amino[x] for x in dna_seq])
+    for l in keys(tree.lnodes)
+        data!(tree[l], Seq(seq = copy(start_seq), DNA = copy(dna_seq)))
+    end
+    codon_list2=Vector{String}(undef, 2);codon_list3=Vector{String}(undef, 3);codon_list4 =Vector{String}(undef, 4);
+    amino_list2=Ti.([1,1]); amino_list3=Ti.([1,1,1]); amino_list4=Ti.([1,1,1,1]);
+    log_prob2 = T.([0.,0.]); log_prob3 = T.([0.,0.,0.]); log_prob4 = T.([0.,0.,0.,0.]);
+    Storage{Ti, T}(tree, generator, codon_list2, codon_list3, codon_list4, 
+        amino_list2, amino_list3, amino_list4, 
+        log_prob2, log_prob3, log_prob4)
+end
+
 
 
 function log_prob_tree!(log_prob::Array{T,1}, 
@@ -131,25 +147,24 @@ function prob_cond_tree!(chain::Storage{Int64, Float64},
     
 end
 
-
-function return_pos(seq::Array{Int,1},L::Int)
-    idx = rand(1:L)
-    if seq[idx] == 21
-        return_pos(seq,L)
-    else
-        return idx
+function return_pos(seq::Vector{Int}, L::Int)
+    while true
+        idx = rand(1:L)
+        if seq[idx] != 21
+            return idx
+        end
     end
 end
 
-
-function return_pos(seq::Array{Int8,1},L::Int)
-    idx = rand(1:L)
-    if seq[idx] == 21
-        return_pos(seq,L)
-    else
-        return idx
+function return_pos(seq::Vector{Int8}, L::Int)
+    while true
+        idx = rand(1:L)
+        if seq[idx] != 21
+            return idx
+        end
     end
 end
+
 
 
 function run_gibbs_sampling_tree!(chain::Storage{Int64, Float64}, 
@@ -287,7 +302,7 @@ function assign_sequences!(node::TreeNode{Seq},
 end
 
 
-function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}}, tree_file::String, h::Array{T,2}, J::Array{T,4};
+function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}, Array{String,1}}, tree_file::String, h::Array{T,2}, J::Array{T,4};
         temp::Float64 = 1.0, 
         mu::Float64 = 1.0,
         p::Float64 = 0.5, 
@@ -359,15 +374,5 @@ function msa_from_nodes(tree)
 end
 
 
-function find_optimal_mu(tree_file::String, mus::Array{Float64,1}, start_seq::Array{Int,1}, nat_msa::Array{Int8,2}, h::Array{Float64,2}, J::Array{Float64,4}; n_seq = 1000)
-    
-    f_nat = pair_dist_freq(nat_msa, n_seq = n_seq); n_max = argmax(f_nat); res = [];
-    for mu in mus
-        tree = run_evolution_ontree(start_seq, tree_file, h, J, mu = mu, p = 0.5); 
-        msa = msa_from_leafs(tree); 
-        f_sim = pair_dist_freq(msa, n_seq = n_seq); 
-        push!(res,kldivergence(f_sim[1:n_max]./sum(f_sim[1:n_max]), f_nat[1:n_max]./sum(f_nat[1:n_max])))
-    end
-    println("Optimal mu: $(mus[argmin(res)])")
-    return (mus = mus, score = res)
-end
+
+
