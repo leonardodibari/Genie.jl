@@ -8,7 +8,7 @@ Npairs = 100
 temp = 1.0
 file_wt = "../../data/TEM1_pfam_DNA.fasta"
 file_model = "../../data/model_natural_PSE.dat"
-output_folder = "../"*string(wt_name)*"/mcmc/"
+output_folder = "../../"
 
 println("Reading arguments")
 L_args = length(ARGS)

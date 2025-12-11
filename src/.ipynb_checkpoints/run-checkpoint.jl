@@ -142,7 +142,7 @@ function run_evolution(start_msa, h::Array{T,2}, J::Array{T,4};
     else
         msa = Int8.(zeros(L, N_chains))
         msa_dna = Matrix{String}(undef, L, N_chains)
-        @tasks for n in 1:N_chains
+        for n in 1:N_chains
             for i in 1:L
                 msa[i,n] = Int8.(chains[n].seq[i])
                 msa_dna[i,n] = chains[n].DNA[i]
