@@ -1,18 +1,20 @@
 
 # Genie.jl Evolution Simulation Package
 
-**Genie.jl** is a Julia package designed to simulate the evolution of multiple sequence alignments (MSAs) based on specified parameters and conditions. Its primary function, `run_evolution`, enables users to simulate evolutionary trajectories for amino acid or nucleotide codon sequences under complex interaction parameters.
+**Genie.jl** is a Julia package designed to simulate the evolution of multiple sequence alignments (MSAs) under diverse evolutionary models and constraints. It supports three main workflows:
 
-The complete description of the algorithm is available at
-> Emergent time scales of epistasis in protein evolution   
-> Leonardo Di Bari, Matteo Bisardi, Sabrina Cotogno, Martin Weigt, Francesco Zamponi;
+1. **MCMC on sequences (`run_evolution`)** – Simulate evolutionary trajectories for amino acid or nucleotide sequences using Gibbs and Metropolis sampling, with options for codon bias, random initialization, and saving intermediate MSAs.
+
+2. **Population-genetics evolution (`run_dir_evol_nucleo`)** – Simulate nucleotide-level population-genetics evolution, including mutation, selection, and amplification over multiple rounds. MSAs can be saved at specific rounds or intervals.
+
+3. **MCMC along phylogenetic trees (`run_evolution_ontree`)** – Simulate sequence evolution constrained by phylogenetic tree topology, supporting single or multiple trees and codon-level assignments.
+
+The complete description of the underlying algorithm is available at:  
+> Emergent time scales of epistasis in protein evolution  
+> Leonardo Di Bari, Matteo Bisardi, Sabrina Cotogno, Martin Weigt, Francesco Zamponi;  
 > doi: https://www.pnas.org/doi/10.1073/pnas.2406807121
 
-Please cite this article if you use Genie.jl! 
-
-# Genie.jl Evolution Simulation Package
-
-**Genie.jl** is a Julia package designed to simulate the evolution of multiple sequence alignments (MSAs) based on specified parameters and conditions. Its primary function, `run_evolution`, enables users to simulate evolutionary trajectories for amino acid or nucleotide codon sequences under complex interaction parameters.
+Please cite this article if you use Genie.jl!
 
 # Installing the Genie Package via Git Clone
 
@@ -195,48 +197,147 @@ Once you have installed the Genie package, you can either use the example notebo
 ```
 - then you can directly copy each cell of the 'examples' folder in your terminal to explore Genie's features (remember to adjust the paths of the data).
 
+## Additional details on key Functions
 
-## Additional details on key Functions: `run_evolution`, 
+---
 
-### Overview
+### 1. Function: `run_evolution` (MCMC on sequences)
+
+```julia
+function run_evolution(
+    start_msa, 
+    h::Array{T,2}, 
+    J::Array{T,4}; 
+    N_steps::Int = 100, 
+    temp = 1.0,  
+    p = 0.5, 
+    N_points::Union{Int, Nothing} = nothing, 
+    each_step::Union{Int, Nothing} = nothing, 
+    rand_init = false, 
+    q = 21, 
+    codon_bias::Union{Nothing, Dict{String, Float64}} = nothing, 
+    verbose = false
+) where {T}
+```
+
+#### Overview
 The `run_evolution` function simulates the evolution of a given multiple sequence alignment (MSA) over a specified number of steps. It uses a combination of Gibbs sampling and Metropolis sampling to evolve the sequences, supporting options for random initialization, codon usage bias, and saving intermediate MSAs at specified intervals.
 
-### Parameters
-- **`start_msa::Array{T,2}`**: Initial MSA as a 2D array where `T` can be either `Int8` for amino acids or `String` for nucleotide codons. If amino acids are provided, the corresponding codons will be randomly sampled among those coding for the amino acids. The array dimensions must be `(L, M)`, where `L` is the sequence length, and each column represents a different sequence.
+#### Parameters
+- **`start_msa::Array{T,2}`**: Initial MSA as a 2D array where `T` can be either `Int8` for amino acids or `String` for nucleotide codons.  
+- **`h::Array{T,2}`**: Field parameters of size `(q, L)`.  
+- **`J::Array{T,4}`**: Coupling parameters of size `(q, L, q, L)`.
 
-- **`h::Array{T,2}`**: A 2D array of size `(q, L)` representing the field parameters.
+##### Optional Parameters
+- **`N_steps::Int`**: Number of steps for the simulation (default: 100).  
+- **`temp`**: Temperature parameter for the simulation (default: 1.0).  
+- **`p`**: Probability for choosing Metropolis moves (default: 0.5).  
+- **`N_points::Union{Int, Nothing}`**: Number of points to save the MSA in logarithmic scale.  
+- **`each_step::Union{Int, Nothing}`**: Interval to save the MSA every `each_step` steps.  
+- **`rand_init::Bool`**: Whether to initialize sequences randomly (default: false).  
+- **`q::Int`**: Number of unique amino acids (default: 21).  
+- **`codon_bias::Union{Nothing, Dict{String, Float64}}`**: Codon usage bias (default: nothing).  
+- **`verbose::Bool`**: Print progress information (default: false).
 
-- **`J::Array{T,4}`**: A 4D array of size `(q, L, q, L)` representing the coupling parameters.
+#### Returns
+- If `N_points` or `each_step` are not specified:
+  - **`msa::Array{Int8,2}`**, **`msa_dna::Array{String,2}`**, **`codon_usage::Dict`**, **`p`**, **`temp`**  
+- If `N_points` or `each_step` are specified:
+  - **`step_msa::Array{Array{Int8,2},1}`**, **`msa_dna::Array{Array{String,2},1}`**, **`codon_usage::Dict`**, **`p`**, **`temp`**, **`steps::Array{Int,1}`**
 
-### Optional Parameters
-- **`N_steps::Int`**: Number of steps for the simulation (default is 100).
-- **`temp`**: Temperature parameter for the simulation (default is 1.0).
-- **`p`**: Probability for choosing Metropolis Sampling (default is 0.5). A value of `0` will use only Gibbs Sampling with single nucleotide mutations, while `1` will use only Metropolis Sampling with indels.
-- **`N_points::Union{Int, Nothing}`**: Number of points to save the MSA in logarithmic scale along the trajectory (default is `nothing`). Specify either `N_points` or `each_step`, but not both.
-- **`each_step::Union{Int, Nothing}`**: Interval to save the MSA every `each_step` steps along the trajectory (default is `nothing`). Specify either `N_points` or `each_step`, but not both.
-- **`rand_init::Bool`**: Whether to initialize sequences randomly (default is `false`).
-- **`q::Int`**: Number of unique amino acids in the sequences (default is 21).
-- **`codon_bias::Union{Nothing, Dict{String, Float64}}`**: Codon usage bias dictionary (default is `nothing`; assumes no codon bias).
-- **`verbose::Bool`**: Whether to print progress information (default is `false`).
+#### Description
+Simulates sequence evolution using Gibbs and Metropolis sampling. Supports codon usage bias, random initialization, and saving MSAs at selected intervals. Suitable for studying complex evolutionary dynamics in MSAs.
 
-### Returns
-The function returns a named tuple containing the results of the simulation. The structure of the output depends on whether `N_points` or `each_step` is specified.
+---
 
-1. **If `N_points` or `each_step` are not specified**:
-   - **`msa::Array{Int8, 2}`**: Final MSA in amino acid form.
-   - **`msa_dna::Array{String, 2}`**: Final MSA in DNA format.
-   - **`codon_usage::Dict{String, Float64}`**: Codon usage dictionary used in the simulation.
-   - **`p::Float64`**: Probability of choosing Metropolis Sampling.
-   - **`temp::Float64`**: Temperature used in the simulation.
+### 2. Function: `run_dir_evol_nucleo` (Population-genetics)
 
-2. **If either `N_points` or `each_step` are specified**:
-   - **`step_msa::Array{Array{Int8, 2}, 1}`**: List of MSAs at different time points in amino acid format.
-   - **`msa_dna::Array{Array{String, 2}, 1}`**: List of MSAs in DNA format at different time points.
-   - **`codon_usage::Dict{String, Float64}`**: Codon usage dictionary used in the simulation.
-   - **`p::Float64`**: Probability of choosing Metropolis Sampling.
-   - **`temp::Float64`**: Temperature used in the simulation.
-   - **`steps::Array{Int, 1}`**: Steps at which MSAs were saved.
+```julia
+function run_dir_evol_nucleo(start_seq::Array{String,1}, N_start::Int, h::Array{T,2}, J::Array{T,4};
+                   rounds::Int = 4, 
+                   each_step::Union{Int, Nothing} = nothing,
+                   seq_steps::Union{Int, Nothing} = nothing,
+                   seq_reads::Int = 100,
+                   temp::Float64 = 1.0,  
+                   mu::T = 10^-2,
+                   mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
+                   codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
+                   mu_bind::Float64 = 18.6,
+                   q::Int = 21,
+                   verbose = false,
+                   neutral = false) where {T}
+```    
+    
 
-### Description
-The `run_evolution` function simulates the evolution of an initial MSA over a specified number of steps. It employs both Gibbs sampling and Metropolis sampling to generate evolved sequences, with options for random initialization, codon usage bias, and saving intermediate MSAs at specified intervals. The function is highly customizable and suitable for simulating complex evolutionary dynamics under various conditions.
+#### Overview
+Simulates population-genetics evolution of nucleotide sequences over multiple rounds. Supports mutation, selection, amplification, codon bias, and mutation bias. Returns MSAs at final round or at specified steps.
+
+#### Parameters
+- **`start_msa::Array{Int8,2}`**: Initial MSA in amino acid form.  
+- **`start_msa_dna::Array{String,2}`**: Initial MSA in DNA form.  
+- **`h::Array{T,2}`**: Field parameters `(q,L)`.  
+- **`J::Array{T,4}`**: Coupling parameters `(q,L,q,L)`.
+
+##### Optional Parameters
+- **`rounds::Int`**: Number of evolution rounds (default: 4).  
+- **`each_step::Union{Int, Nothing}`**: Interval to save MSA.  
+- **`seq_steps::Union{Int, Nothing}`**: Custom steps to save MSA.  
+- **`seq_reads::Int`**: Number of sequences to sample (default: 100).  
+- **`temp::Float64`**: Temperature for selection (default: 1.0).  
+- **`mu::T`**: Mutation rate (default: 0.01).  
+- **`mu_bind::Float64`**: Binding-related mutation factor (default: 18.6).  
+- **`q::Int`**: Number of amino acids (default: 21).  
+- **`codon_bias::Union{Nothing, Dict{String, Float64}}`**: Codon usage bias.  
+- **`mut_bias::Union{Nothing, Dict{Tuple{Char,Char}, Float64}}`**: Mutation bias.  
+- **`verbose::Bool`**: Print progress (default: false).  
+- **`neutral::Bool`**: Disable selection if true (default: false).
+
+#### Returns
+- If `each_step` or `seq_steps` is specified:
+  - MSAs **before/after selection**, in **amino acid** and **DNA** forms, at each step.  
+  - **`steps`**, **`mu`**, **`mu_bind`**, **`temp`**  
+- Otherwise:
+  - **`final_msa`**, **`final_msa_dna`**, **`mu`**, **`mu_bind`**, **`temp`**
+
+#### Description
+Performs directed evolution in a population-genetics framework. Each round includes mutation, selection (optional), and amplification. Can save MSAs at chosen intervals or sequencing steps. Suitable for studying nucleotide-level population dynamics.
+
+---
+
+### 3. Function: `run_evolution_ontree` (MCMC on a Phylogenetic Tree)
+
+```julia
+function run_evolution_ontree(start_seq::Union{Array{Int,1}, Array{Int,2}, Array{String,1}}, tree_file::String, h::Array{T,2}, J::Array{T,4};
+        temp::Float64 = 1.0, 
+        mu::Float64 = 1.0,
+        p::Float64 = 0.5, 
+        q = 21, 
+        codon_bias::Union{Nothing, Dict{String, Float64}} = nothing, 
+        verbose = false) where {T}
+```
+
+#### Overview
+Simulates sequence evolution along one or more phylogenetic trees using MCMC. Codon-level assignments and mutations are applied along branches. Supports single or multiple trees in parallel.
+
+#### Parameters
+- **`start_seq::Union{Array{Int,1}, Array{Int,2}, Array{String,1}}`**: Initial sequence(s) (amino acid or DNA).  
+- **`tree_file::String`**: Path to Newick tree.  
+- **`h::Array{T,2}`**: Field parameters `(q,L)`.  
+- **`J::Array{T,4}`**: Coupling parameters `(q,L,q,L)`.
+
+##### Optional Parameters
+- **`temp::Float64`**: Temperature parameter (default: 1.0).  
+- **`mu::Float64`**: Mutation rate (default: 1.0).  
+- **`p::Float64`**: Probability of Metropolis moves (default: 0.5).  
+- **`q::Int`**: Number of amino acids (default: 21).  
+- **`codon_bias::Union{Nothing, Dict{String, Float64}}`**: Codon usage bias.  
+- **`verbose::Bool`**: Print progress (default: false).
+
+#### Returns
+- Single input sequence/tree: returns one evolved tree object.  
+- Multiple sequences/trees: returns array of evolved tree objects.
+
+#### Description
+Evolves sequences along phylogenetic trees using MCMC. Ensures sequence lengths match parameter matrices. Supports amino acid and DNA inputs. Useful for simulating evolution constrained by tree topology and analyzing lineage diversification.
+
 
