@@ -604,3 +604,56 @@ let alphabet = ["A", "C", "D", "E", "F", "G", "H", "I",  "K", "L",  "M",  "N", "
         return "-"
     end
 end
+
+
+function dna2fasta(filename::String, msa::Matrix{String})
+           _, M = size(msa) # L righe, M colonne
+           open(filename, "w") do io
+               for j in 1:M
+                   sequence = join(msa[:, j])
+                   write(io, ">$j\n")
+                   write(io, "$sequence\n")
+               end
+           end
+       end
+
+
+function read_dna_to_int(filename::String)
+    sequences = Int[]
+    current_seq = ""
+    n_seqs = 0
+    
+    # Dizionario di codifica
+    encoding = Dict('A'=>1, 'C'=>2, 'G'=>3, 'T'=>4, 'a'=>1, 'c'=>2, 'g'=>3, 't'=>4, '-'=>5)
+
+    lines = readlines(filename)
+    
+    # Estraiamo solo le sequenze ignorando gli header
+    seqs_list = String[]
+    temp_seq = ""
+    for line in lines
+        if startswith(line, ">")
+            if !isempty(temp_seq)
+                push!(seqs_list, temp_seq)
+                temp_seq = ""
+            end
+        else
+            temp_seq *= strip(line)
+        end
+    end
+    push!(seqs_list, temp_seq) # Ultima sequenza
+
+    # Conversione in Matrice L x M
+    L = length(seqs_list)
+    M = length(seqs_list[1])
+    msa_int = zeros(Int, L, M)
+
+    for i in 1:L
+        for j in 1:M
+            char = seqs_list[i][j]
+            msa_int[i, j] = get(encoding, char, 5) # Default al gap se carattere ignoto
+        end
+    end
+    
+    return Int8.(msa_int')
+end

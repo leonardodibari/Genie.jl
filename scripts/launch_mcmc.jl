@@ -35,6 +35,7 @@ end
 
 println(output_folder*string(wt_name)*"_mcmc_samples"*string(Nseqs)*"_T"*string(temp)* "_steps$(Nsteps)_pairs$(Npairs)")
 
+file_model = "../data_ASR/Parameters_conv_DHFR.dat"
 # Read model parameters
 println("Reading model parameters")
 if wt_name == "AAC" || wt_name == "DHFR"
@@ -45,6 +46,33 @@ end
 h = set_max_field_to_0save(h_tmp);
 J_tmp2 = symmetrize_Jsave(J_tmp); 
 J = permutedims(J_tmp2, [1,3,2,4]);
+
+
+file_modelnc = "../data_ASR/Parameters_conv_DHFR_noclose.dat"
+# Read model parameters
+println("Reading model parameters")
+#if wt_name == "AAC" || wt_name == "DHFR"
+    	#h_tmpnc, J_tmpnc = read_par_BM_0gapsave(file_modelnc)
+#else
+	h_tmpnc, J_tmpnc = read_par_BM_lettersave(file_modelnc)
+#end
+hnc = set_max_field_to_0save(h_tmpnc);
+J_tmp2nc = symmetrize_Jsave(J_tmpnc); 
+Jnc = permutedims(J_tmp2nc, [1,3,2,4]);
+
+cor(h[:], hnc[:])
+cor(J[:], Jnc[:])
+
+close("all")
+plt.scatter(h[:], hnc[:])
+savefig("../field_corr.png")
+
+close("all")
+plt.scatter(J[:], Jnc[:])
+savefig("../coupling_corr.png")
+
+
+
 
 
 # Reading sequences in the seed

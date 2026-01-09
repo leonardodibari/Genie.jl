@@ -158,24 +158,25 @@ cod2amino::Dict{String, Int8} = Dict(
     "---" => Int8(21)
 )
 
-#=
-cod2amino = Dict( "ATA" => Int8(8), "ATC" => Int8(8), "ATT"=> Int8(8), "ATG"=> Int8(11), 
-        "ACA"=>Int8(17), "ACC"=>Int8(17), "ACG"=>Int8(17), "ACT"=> Int8(17), 
-        "AAC"=>Int8(12), "AAT"=>Int8(12), "AAA"=>Int8(9), "AAG"=>Int8(9), 
-        "AGC"=>Int8(16), "AGT"=> Int8(16), "AGA"=> Int8(15), "AGG"=> Int8(15),                  
-        "CTA"=>Int8(10), "CTC"=>Int8(10), "CTG"=>Int8(10), "CTT"=>Int8(10), 
-        "CCA"=>Int8(13), "CCC"=>Int8(13), "CCG"=>Int8(13), "CCT"=>Int8(13), 
-        "CAC"=>Int8(7), "CAT"=>Int8(7), "CAA"=>Int8(14), "CAG"=>Int8(14), 
-        "CGA"=>Int8(15), "CGC"=>Int8(15), "CGG"=>Int8(15), "CGT"=>Int8(15), 
-        "GTA"=>Int8(18), "GTC"=>Int8(18), "GTG"=>Int8(18), "GTT"=>Int8(18), 
-        "GCA"=>Int8(1), "GCC"=>Int8(1), "GCG"=>Int8(1), "GCT"=>Int8(1), 
-        "GAC"=>Int8(3), "GAT"=>Int8(3), "GAA"=>Int8(4), "GAG"=>Int8(4), 
-        "GGA"=>Int8(6), "GGC"=>Int8(6), "GGG"=>Int8(6), "GGT"=>Int8(6), 
-        "TCA"=>Int8(16), "TCC"=>Int8(16), "TCG"=>Int8(16), "TCT"=>Int8(16), 
-        "TTC"=>Int8(5), "TTT"=>Int8(5), "TTA"=>Int8(10), "TTG"=>Int8(10), 
-        "TAC"=>Int8(20), "TAT"=>Int8(20), "TGC"=> Int8(2), "TGT"=>Int8(2) , "TGG"=> Int8(19), 
-        "---" => Int8(21) )
-=#
+cod2amino_nofilt::Dict{String, Int8} = Dict(
+    "ATA" => Int8(8), "ATC" => Int8(8), "ATT" => Int8(8), "ATG" => Int8(11),
+    "ACA" => Int8(17), "ACC" => Int8(17), "ACG" => Int8(17), "ACT" => Int8(17),
+    "AAC" => Int8(12), "AAT" => Int8(12), "AAA" => Int8(9), "AAG" => Int8(9),
+    "AGC" => Int8(16), "AGT" => Int8(16), "AGA" => Int8(15), "AGG" => Int8(15),
+    "CTA" => Int8(10), "CTC" => Int8(10), "CTG" => Int8(10), "CTT" => Int8(10),
+    "CCA" => Int8(13), "CCC" => Int8(13), "CCG" => Int8(13), "CCT" => Int8(13),
+    "CAC" => Int8(7), "CAT" => Int8(7), "CAA" => Int8(14), "CAG" => Int8(14),
+    "CGA" => Int8(15), "CGC" => Int8(15), "CGG" => Int8(15), "CGT" => Int8(15),
+    "GTA" => Int8(18), "GTC" => Int8(18), "GTG" => Int8(18), "GTT" => Int8(18),
+    "GCA" => Int8(1), "GCC" => Int8(1), "GCG" => Int8(1), "GCT" => Int8(1),
+    "GAC" => Int8(3), "GAT" => Int8(3), "GAA" => Int8(4), "GAG" => Int8(4),
+    "GGA" => Int8(6), "GGC" => Int8(6), "GGG" => Int8(6), "GGT" => Int8(6),
+    "TCA" => Int8(16), "TCC" => Int8(16), "TCG" => Int8(16), "TCT" => Int8(16),
+    "TTC" => Int8(5), "TTT" => Int8(5), "TTA" => Int8(10), "TTG" => Int8(10),
+    "TAC" => Int8(20), "TAT" => Int8(20), "TGC" => Int8(2), "TGT" => Int8(2), "TGG" => Int8(19),
+    "---" => Int8(21), "TAA"=> Int8(21), "TAG" => Int8(21), "TGA" => Int8(21)
+)
+
 
 amino2cod = Dict()
 for amino in 1:21
@@ -215,6 +216,8 @@ function codon_neighbors()
 end
 
 
+
+
 # Function to construct the nested codon dictionary
 function create_nested_codon_dict()
     nucleotides = ["A", "C", "G", "T"]
@@ -242,6 +245,8 @@ function create_nested_codon_dict()
     return codon_dict
 end
 
+
+
 function create_nested_codon_dict_no_same()
     nucleotides = ["A", "C", "G", "T"]
     codon_dict = Dict{String, Dict{Int, Vector{String}}}()
@@ -264,6 +269,32 @@ function create_nested_codon_dict_no_same()
                 codon_dict[old_codon][i] = codon_list
             end
         end
+    end
+
+    return codon_dict
+end
+
+function create_nested_codon_dict_no_same_nofilt()
+    println("no stop codon filter")
+    nucleotides = ["A", "C", "G", "T"]
+    codon_dict = Dict{String, Dict{Int, Vector{String}}}()
+
+    for a in nucleotides, b in nucleotides, c in nucleotides
+        old_codon = string(a, b, c)
+        
+        codon_dict[old_codon] = Dict{Int, Vector{String}}()
+        for i in 1:3
+            codon_list = String[]
+            for nucl in nucleotides
+                if nucl != old_codon[i]
+                    new_codon = string(old_codon[1:i-1], nucl, old_codon[i+1:end])
+                    push!(codon_list, new_codon)    
+                end
+            end
+            filter!(x -> x != old_codon, codon_list)
+            codon_dict[old_codon][i] = codon_list
+        end
+        
     end
 
     return codon_dict

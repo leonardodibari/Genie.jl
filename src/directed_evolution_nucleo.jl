@@ -1,8 +1,4 @@
 
-function replace_char(s::String, i::Int, new_char::Char)
-    return s[1:i-1] * string(new_char) * s[i+1:end]
-end
-
 function random_mutations_nucleo!(msa::Matrix{Int8}, msa_dna::Matrix{String}, 
         codon_net::Dict{String, Dict{Int, Vector{String}}}, 
         length_of_moves::Dict{Tuple{String, Int64}, Int64},
@@ -13,29 +9,15 @@ function random_mutations_nucleo!(msa::Matrix{Int8}, msa_dna::Matrix{String},
         verbose = false) where {T}
     
     L,M = size(msa)
-    distrib = Binomial(L, prob_mut_one_site(mu, q = q))
+    distrib = Binomial(3*L, prob_mut_one_site(mu, q = 4))
        
     all_nucleos = ['A','C', 'G', 'T'];
-    @tasks for m in 1:M
+    for m in 1:M
         K = rand(distrib) ## number of mutation 
         pos = sample(1:3*L,K, replace = false); ## positions of mutations
         for k in 1:K
             seq_site = div(pos[k]-1,3) + 1
-            nucleo_site = mod(pos[k]-1,3) + 1
-            
-            
-            #=
-            
-            ##New version
-            new_nucleo = sample(filter(x -> x != msa_dna[seq_site,m][nucleo_site], all_nucleos), 1)
-            
-            new_codon = replace_char(msa_dna[seq_site, m], nucleo_site, new_nucleo[1])
-            if new_codon != "TAG" && new_codon != "TAA" && new_codon != "TGA"
-                msa_dna[seq_site, m] = new_codon
-            end
-            msa[seq_site,m] = cod2amino[msa_dna[seq_site,m]] =#
-            
-            
+            nucleo_site = mod(pos[k]-1,3) + 1       
             if msa[seq_site,m] == 21
                 
             else
@@ -65,64 +47,7 @@ function random_mutations_nucleo!(msa::Matrix{Int8}, msa_dna::Matrix{String},
     
 end
 
-
-
-function random_mutations_nucleo_biased!(msa::Matrix{Int8}, msa_dna::Matrix{String}, 
-        codon_net::Dict{String, Dict{Int, Vector{String}}}, 
-        length_of_moves::Dict{Tuple{String, Int64}, Int64},
-        codon_list::Vector{Vector{String}},
-        prob_codon_list::Vector{Vector{Float64}},
-        abund_dict::Dict{Vector{String}, Int64}, 
-        mu::T,
-        trans_dict::Dict{Tuple{String, String}, Float64}; 
-        q::Int = 4,
-        verbose = false) where {T}
-    
-    L,M = size(msa)
-    distrib = Binomial(L, prob_mut_one_site(mu, q = q))
-    
-    @tasks for m in 1:M
-        K = rand(distrib) 
-        pos = sample(1:3*L,K, replace = false);
-        for k in 1:K
-            seq_site = div(pos[k]-1,3) + 1
-            nucleo_site = mod(pos[k]-1,3) + 1
-            L_moves = length_of_moves[msa_dna[seq_site,m], nucleo_site]
-            if L_moves == 1
-                msa_dna[seq_site,m] = accessible_codons(msa_dna[seq_site,m], codon_net, nucleo_site)[1]
-                msa[seq_site,m] = cod2amino[msa_dna[seq_site,m]]
-            else
-                codon_list[L_moves] .= accessible_codons(msa_dna[seq_site,m], codon_net, nucleo_site)
-                for i in 1:length(codon_list[L_moves])
-                    prob_codon_list[L_moves][i] = trans_dict[msa_dna[seq_site,m], codon_list[L_moves][i]]
-                end                    
-                msa_dna[seq_site,m] = sample(codon_list[L_moves], Weights(prob_codon_list[L_moves]))
-                msa[seq_site,m] = cod2amino[msa_dna[seq_site,m]]
-            end
-        end
-    end
-    
-    empty!(abund_dict)
-    seq_count_dict_nucleo!(abund_dict, msa_dna)
-    clean_dict_nucleo!(abund_dict)
-
-    if verbose == true
-        println("$(100*length(abund_dict)/M) % unique seqs after mutagenesis")
-    end
-end
-
-
-function inv_degeneracy(seq::Array{String,1}, codon_usage::Dict{String, Float64})
-    p = 1.
-    for x in seq
-        p *= codon_usage[x]
-    end
-    return p
-end 
-     
-#### METTI 1/DEGENERAZIONE SEQUENZA DAVANTI A (a/1+a), forse idea non buona, circa 10^-100 per ogni sequenza
-
-function selection_nucleo!(h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{Vector{String}, Int64}, codon_usage::Dict{String, Float64}, L::Int, M::Int; temp::T = 1., mu_bind::T = 18.6, verbose = false) where {T}
+function selection_nucleo!(h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{Vector{String}, Int64}, L::Int, M::Int; temp::T = 1., mu_bind::T = 18.6, verbose = false) where {T}
         
 
     seq_dna = collect(keys(abund_dict))  # Turn to indexable vector
@@ -136,36 +61,13 @@ function selection_nucleo!(h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{Vector
             surv_prob[i] = 0.
         else
             aa[i] = exp( - ((energy_dna2(seq, h, J, L) - mu_bind ) / temp))
-            p = 1. #inv_degeneracy(seq_dna[i], codon_usage)
+            p = 1.
             surv_prob[i] = (p*aa[i])/(1+aa[i])
         end
         distrib = Binomial(abund_dict[seq], surv_prob[i])
         abund_dict[seq_dna[i]] = rand(distrib)
     end
-  
-    
-    #=
-    surv_prob = [ ]
-    for seq_dna in keys(abund_dict)
-        if "TAG" in seq_dna || "TAA" in seq_dna || "TGA" in seq_dna
-            push!(surv_prob,0.)
-        else
-            a = exp( - ((energy_dna2(seq_dna, h, J, L) - mu_bind ) / temp))
-            p = 1. #inv_degeneracy(seq_dna, codon_usage)
-            push!(surv_prob, (p*a)/(1+a))
-        end
-    end =#
-        
-    
-    #println("Extrema of surv_prob is $(extrema(surv_prob))")
-    
-    #=idx = 1; 
-    for seq in keys(abund_dict)
-        distrib = Binomial(abund_dict[seq], surv_prob[idx])
-        abund_dict[seq] = rand(distrib)
-        idx+=1    
-    end =#
-    
+      
     clean_dict_nucleo!(abund_dict)
     
     if verbose == true
@@ -174,7 +76,7 @@ function selection_nucleo!(h::Array{T,2}, J::Array{T,4}, abund_dict::Dict{Vector
 end
 
 
-function amplification_nucleo!(final_msa::Array{Int8,2}, final_msa_dna::Array{String,2}, abund_dict::Dict{Vector{String}, Int64})
+function amplification_nucleo!(final_msa::Array{Int8,2}, final_msa_dna::Array{String,2}, abund_dict::Dict{Vector{String}, Int64}, neutral::Bool)
     
     L, Mf = size(final_msa);
         
@@ -183,19 +85,33 @@ function amplification_nucleo!(final_msa::Array{Int8,2}, final_msa_dna::Array{St
         push!(seqs_dna, kk)
     end
     
-    w = [abund_dict[seq] for seq in keys(abund_dict)];
-    #w2 = [abund_dict[seq] for seq in seqs];
-    
+    w = [abund_dict[seq] for seq in keys(abund_dict)];  
     M = length(seqs_dna);
-    
-    #println(sum(abs2, w .- w2))
-    
-    idxs = sample(1:M, Weights(w), Mf);
-    
-    @tasks for m in 1:Mf
-        for i in 1:L
-            final_msa_dna[i,m] = seqs_dna[idxs[m]][i]
-            final_msa[i,m] = cod2amino[final_msa_dna[i,m]]
+   
+    if neutral == true
+        println("neutral simulation")
+        # We need a pointer to track the global column position
+        current_col = 1
+        for m in 1:M
+            num_repeats = w[m]
+            # Fill 'num_repeats' columns starting from current_col
+            for n in 0:(num_repeats - 1)
+                target_col = current_col + n
+                for i in 1:L
+                    final_msa_dna[i, target_col] = seqs_dna[m][i]
+                    final_msa[i, target_col] = cod2amino[final_msa_dna[i, target_col]]
+                end
+            end
+            # Advance the pointer by the number of sequences we just added
+            current_col += num_repeats
+        end    
+    else
+        idxs = sample(1:M, Weights(w), Mf); 
+        @tasks for m in 1:Mf
+            for i in 1:L
+                final_msa_dna[i,m] = seqs_dna[idxs[m]][i]
+                final_msa[i,m] = cod2amino[final_msa_dna[i,m]]
+            end
         end
     end
 end
@@ -213,8 +129,6 @@ function seq_count_dict_nucleo!(dict::Dict{Vector{String}, Int64}, msa_dna::Arra
 
 end
 
-
-
 function clean_dict_nucleo!(d::Dict{Vector{String}, Int64})
     for k in keys(d)  # Iterate over keys
         if d[k] == 0
@@ -223,7 +137,6 @@ function clean_dict_nucleo!(d::Dict{Vector{String}, Int64})
     end
 end
     
-
 
 function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{String, 2}, h::Array{T,2}, J::Array{T,4};
                    rounds::Int = 4, 
@@ -234,8 +147,6 @@ function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{Stri
                    mu::T = 10^-2,
                    mu_bind::Float64 = 18.6,
                    q::Int = 21,
-                   codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
-                   mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
                    verbose = false,
                    neutral = false) where {T}
     
@@ -301,44 +212,29 @@ function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{Stri
     abund_dict_nucleo = Dict{Vector{String},Int}()
     codon_list = [Vector{String}(undef, i) for i in 1:4]
     prob_codon_list = [Vector{Float64}(undef, i) for i in 1:4]
-
-    if codon_bias == nothing
-        no_cod_bias = Dict(x => T(1/length(amino2cod[cod2amino[x]])) for x in keys(cod2amino))
-        codon_usage = no_cod_bias
-    end
-    
-    if mut_bias !== nothing
-        trans_dict = create_codon_transition_dict(mut_bias)
-    end
-        
+            
     for r in 1:rounds
         if verbose == true
             println()
             println("Round $(r)")
         end
         
-        if mut_bias == nothing 
-            Genie.random_mutations_nucleo!(final_msa, final_msa_dna, codon_net, 
+        
+        Genie.random_mutations_nucleo!(final_msa, final_msa_dna, codon_net, 
                 length_of_moves, codon_list, abund_dict_nucleo, mu, verbose = verbose);
-        else
-            Genie.random_mutations_nucleo_biased!(final_msa, final_msa_dna, codon_net, 
-                length_of_moves, codon_list, prob_codon_list, abund_dict_nucleo, mu, 
-                trans_dict, verbose = verbose);
-        end
-
+        
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
             count2+=1
-            idxs = rand(1:M,seq_reads)
+            idxs = sample(1:M, seq_reads, replace = false)
             pre_sel_step_msa[count2] .= final_msa[:,idxs]
             pre_sel_step_msa_dna[count2] .= final_msa_dna[:,idxs]
         end 
 
         if neutral == false
-            Genie.selection_nucleo!(h, J, abund_dict_nucleo, codon_usage, L, M, temp = temp, mu_bind = mu_bind, verbose = verbose);
+            Genie.selection_nucleo!(h, J, abund_dict_nucleo, L, M, temp = temp, mu_bind = mu_bind, verbose = verbose);
         else
             clean_dict_nucleo!(abund_dict_nucleo)
         end
-            
         
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
             flattened_dna = Vector{Vector{String}}()
@@ -349,8 +245,7 @@ function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{Stri
             
             mat_dna = hcat(flattened_dna...)
             println(size(mat_dna))
-            
-            
+                        
             push!(post_sel_step_msa_dna, mat_dna)
             
             mat = zeros(Int8, size(mat_dna))
@@ -366,11 +261,12 @@ function run_dir_evol_nucleo(start_msa::Array{Int8,2}, start_msa_dna::Array{Stri
         
         
         clean_dict_nucleo!(abund_dict_nucleo)
-        Genie.amplification_nucleo!(final_msa, final_msa_dna, abund_dict_nucleo)  
+        Genie.amplification_nucleo!(final_msa, final_msa_dna, abund_dict_nucleo, neutral)  
         
         if ((seq_steps !== nothing) || (each_step !== nothing)) && (r in steps)
+            println("new")
             count+=1
-            idxs = rand(1:M,seq_reads)
+            idxs = sample(1:M, seq_reads, replace = false)
             step_msa[count] .= final_msa[:,idxs]
             step_msa_dna[count] .= final_msa_dna[:,idxs]
         end            
@@ -392,8 +288,6 @@ function run_dir_evol_nucleo(start_seq::Array{Int8,1}, N_start::Int, h::Array{T,
                    temp::Float64 = 1.0,  
                    mu::T = 10^-2,
                    mu_bind::Float64 = 18.6,
-                   mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
-                   codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
                    q::Int = 21,
                    verbose = false,
                    neutral = false) where {T}
@@ -409,8 +303,6 @@ function run_dir_evol_nucleo(start_seq::Array{Int8,1}, N_start::Int, h::Array{T,
                    temp = temp,  
                    mu = mu,
                    mu_bind = mu_bind,
-                   codon_bias = codon_bias,
-                   mut_bias = mut_bias,
                    q = q,
                    verbose = verbose,
                    neutral = neutral) 
@@ -423,14 +315,10 @@ function run_dir_evol_nucleo(start_seq::Array{String,1}, N_start::Int, h::Array{
                    seq_reads::Int = 100,
                    temp::Float64 = 1.0,  
                    mu::T = 10^-2,
-                   mut_bias::Union{Nothing, Dict{Tuple{Char, Char}, Float64}} = nothing,
-                   codon_bias::Union{Nothing, Dict{String, Float64}} = nothing,
                    mu_bind::Float64 = 18.6,
                    q::Int = 21,
                    verbose = false,
                    neutral = false) where {T}
-    
-    
     
     start_amino_seq = [cod2amino[x] for x in start_seq];
     start_msa = hcat([start_amino_seq for i in 1:N_start]...);
@@ -442,11 +330,95 @@ function run_dir_evol_nucleo(start_seq::Array{String,1}, N_start::Int, h::Array{
                    temp = temp,  
                    mu = mu,
                    mu_bind = mu_bind,
-                   codon_bias = codon_bias,
-                   mut_bias = mut_bias,
                    q = q,
                    verbose = verbose,
                    neutral = neutral) 
+end
+
+
+
+
+function run_neutral_evol_nucleo(start_seq::Array{String,1}, N_start::Int;
+                   rounds::Int = 4, 
+                   mu::Float64 = 0.1,
+                   q::Int = 21)
+    step_msa = [];
+    step_msa_dna = [];
+    start_amino_seq = [cod2amino[x] for x in start_seq];
+    start_msa = hcat([start_amino_seq for i in 1:N_start]...);
+    start_msa_dna = hcat([start_seq for i in 1:N_start]...);
+    L,M = size(start_msa)
+    codon_net = Genie.create_nested_codon_dict_no_same();
+    msa = copy(start_msa)
+    msa_dna = copy(start_msa_dna)
+    p_mut = (3/4)*(1-exp(-mu))
+    distrib = Binomial(3*L, p_mut)
+    println("new version")
+    
+    
+    for r in 1:rounds
+        println("Round $r")
+        for m in 1:M
+            K = rand(distrib) ## number of mutations 
+            pos = sample(1:3*L,K, replace = false); ## positions of mutations
+            for k in 1:K
+                seq_site = div(pos[k]-1,3) + 1
+                nucleo_site = mod(pos[k]-1,3) + 1       
+                if msa[seq_site,m] == 21
+                    
+                else
+                    codon_list = accessible_codons(msa_dna[seq_site,m], codon_net, nucleo_site)         
+                    msa_dna[seq_site,m] = sample(codon_list)
+                    msa[seq_site,m] = cod2amino[msa_dna[seq_site,m]]
+                end
+            end
+        end
+        push!(step_msa, deepcopy(msa))
+        push!(step_msa_dna, deepcopy(msa_dna))
+    end
+    return (start_msa = start_msa, rounds = rounds, step_msa = step_msa, step_msa_dna = step_msa_dna, final_msa = msa, final_msa_dna = msa_dna, mu = mu)  
+end
+
+
+function run_neutral_evol_nucleo_nofilt(start_seq::Array{String,1}, N_start::Int;
+                   rounds::Int = 4, 
+                   mu::Float64 = 0.1,
+                   q::Int = 21)
+    step_msa = [];
+    step_msa_dna = [];
+    start_amino_seq = [cod2amino[x] for x in start_seq];
+    start_msa = hcat([start_amino_seq for i in 1:N_start]...);
+    start_msa_dna = hcat([start_seq for i in 1:N_start]...);
+    L,M = size(start_msa)
+    codon_net = Genie.create_nested_codon_dict_no_same_nofilt();
+    msa = copy(start_msa)
+    msa_dna = copy(start_msa_dna)
+    p_mut = (3/4)*(1-exp(-mu))
+    distrib = Binomial(3*L, p_mut)
+    println("new version")
+    
+    
+    for r in 1:rounds
+        println("Round $r")
+        for m in 1:M
+            K = rand(distrib) ## number of mutations 
+            pos = sample(1:3*L,K, replace = false); ## positions of mutations
+            for k in 1:K
+                seq_site = div(pos[k]-1,3) + 1
+                nucleo_site = mod(pos[k]-1,3) + 1       
+                if msa[seq_site,m] == 21
+                    
+                else
+                    codon_list = accessible_codons(msa_dna[seq_site,m], codon_net, nucleo_site)         
+                    msa_dna[seq_site,m] = sample(codon_list)
+                    msa[seq_site,m] = cod2amino_nofilt[msa_dna[seq_site,m]]
+                end
+            end
+        end
+        push!(step_msa, deepcopy(msa))
+        push!(step_msa_dna, deepcopy(msa_dna))
+    end
+    return (start_msa = start_msa, rounds = rounds, step_msa = step_msa, step_msa_dna = step_msa_dna, final_msa = msa, final_msa_dna = msa_dna, mu = mu)  
 end
 
 

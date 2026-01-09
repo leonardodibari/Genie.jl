@@ -35,6 +35,7 @@ end
 
 println(output_folder*string(wt_name)*"_mcmc_samples"*string(Nseqs)*"_T"*string(temp)* "_steps$(Nsteps)_pairs$(Npairs)")
 
+
 # Read model parameters
 println("Reading model parameters")
 if wt_name == "AAC" || wt_name == "DHFR"
@@ -45,6 +46,7 @@ end
 h = set_max_field_to_0save(h_tmp);
 J_tmp2 = symmetrize_Jsave(J_tmp); 
 J = permutedims(J_tmp2, [1,3,2,4]);
+
 
 
 # Reading sequences in the seed

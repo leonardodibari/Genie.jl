@@ -367,6 +367,14 @@ function msa_from_leafs(tree)
     return msa
 end
 
+
+function msa_dna_from_leafs(tree)
+    msa = []; for a in keys(tree.lleaves)
+    push!(msa, data(tree[a]).DNA) end; msa = hcat(msa...);
+    return msa
+end
+
+
 function msa_from_nodes(tree)
     msa = []; for a in keys(tree.lnodes)
     push!(msa, data(tree[a]).seq) end; msa = hcat(msa...);
